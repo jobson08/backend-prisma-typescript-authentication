@@ -1,0 +1,304 @@
+# **EduPay - Backend SaaS Multi-Tenant**  
+*Escolinhas de Futebol com Gestão Financeira, Alunos e Portais Personalizados*
+
+---
+
+## Visão Geral
+
+**EduPay** é um **SaaS multi-tenant** completo para **escolinhas de futebol**, com:
+
+- Isolamento total por tenant (escolinha)
+- Super Admin global
+- Portal do Responsável (pai/mãe)
+- Portal do Aluno ≥ 18 anos
+- Gestão de mensalidades, boletos e inadimplência
+- Autenticação JWT com roles
+- Estrutura modular e escalável
+
+---
+
+## Tecnologias
+
+| Camada | Tecnologia |
+|-------|------------|
+| Backend | Node.js + Express |
+| Linguagem | TypeScript |
+| ORM | Prisma ORM |
+| Banco de Dados | PostgreSQL |
+| Autenticação | JWT + bcrypt |
+| Arquitetura | Modular (por domínio) |
+| Documentação | Swagger (OpenAPI) |
+
+---
+
+## Estrutura de Pastas
+
+```bash
+src/
+├── config/               # Configurações (DB, env)
+├── modules/              # Módulos por domínio
+│   ├── auth/             # Login, JWT, roles
+│   ├── tenant/           # Gestão de escolinhas
+│   ├── aluno/            # Alunos
+│   ├── responsavel/      # Pais/responsáveis
+│   ├── mensalidade/      # Mensalidades e boletos
+│   └── usuario/          # Usuários do sistema
+├── types/                # Tipos globais (Express)
+├── seeds/                # Dados iniciais
+├── server.ts             # Entry point
+└── prisma/
+    └── schema.prisma     # Modelo do banco
+```
+
+---
+
+## Modelos Principais (`schema.prisma`)
+
+```prisma
+model Tenant {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  plan         String   // basico | premium
+  status       String   @default("ACTIVE") // ACTIVE, BLOCKED
+  createdAt    DateTime @default(now())
+
+  usuarios     Usuario[]
+  alunos       Aluno[]
+  responsaveis Responsavel[]
+}
+
+model Usuario {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  name           String
+  role           String   // SUPER_ADMIN, ADMIN, TREINADOR, AUXILIAR, RESPONSAVEL, ALUNO
+  tenantId       String?
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id])
+
+  responsavel    Responsavel? @relation("ResponsavelUsuario", fields: [responsavelId], references: [id])
+  responsavelId  String?      @unique
+  aluno          Aluno?       @relation("AlunoUsuario", fields: [alunoId], references: [id])
+  alunoId        String?      @unique
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([role])
+}
+
+model Responsavel {
+  id         String   @id @default(uuid())
+  name       String
+  cpf        String
+  phone      String
+  email      String
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  usuario    Usuario? @relation("ResponsavelUsuario")
+  alunos     Aluno[]  @relation("ResponsavelAlunos")
+
+  @@unique([cpf, tenantId])
+}
+
+model Aluno {
+  id              String   @id @default(uuid())
+  name            String
+  birthDate       DateTime?
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  responsavelId   String?
+  responsavel     Responsavel? @relation("ResponsavelAlunos", fields: [responsavelId], references: [id])
+
+  usuario         Usuario? @relation("AlunoUsuario")
+  mensalidades    Mensalidade[]
+
+  @@index([tenantId])
+}
+```
+
+---
+
+## Perfis de Usuário
+
+| Role | `tenantId` | Acesso |
+|------|------------|--------|
+| `SUPER_ADMIN` | `null` | Todos os tenants |
+| `ADMIN` | tenant | Gestão da escolinha |
+| `TREINADOR` | tenant | Alunos, treinos |
+| `AUXILIAR` | tenant | Apoio |
+| `RESPONSÁVEL` | tenant | Portal do pai/mãe |
+| `ALUNO` | tenant | Portal do aluno ≥ 18 |
+
+---
+
+## Rotas de Autenticação
+
+| Método | Rota | Descrição |
+|-------|------|-----------|
+| `POST` | `/auth/login` | Login com email/senha |
+| `GET`  | `/auth/me` | Dados do usuário logado |
+| `PATCH` | `/auth/change-password` | Trocar senha (autenticado) |
+
+---
+
+## Rotas Principais
+
+### Tenant
+```bash
+GET    /api/tenants/admin/all        → Super Admin lista todos
+GET    /api/tenants/:slug            → Por slug
+POST   /api/tenants                  → Criar tenant (Super Admin)
+```
+
+### Usuário
+```bash
+POST   /usuarios                 → Criar (interno)
+```
+
+### Aluno
+```bash
+GET    /api/alunos                   → Listar (tenant)
+POST   /api/alunos                   → Cadastrar com responsável
+```
+
+### Responsável
+```bash
+GET    /api/responsaveis/meus-filhos → Portal
+GET    /api/responsaveis/boletos     → Boletos
+```
+
+---
+
+## Autenticação JWT
+
+- **Header**: `Authorization: Bearer <token>`
+- **Payload**:
+```json
+{
+  "userId": "abc123",
+  "tenantId": "xyz789" | null,
+  "role": "SUPER_ADMIN",
+  "responsavelId": "def456",
+  "alunoId": "ghi789"
+}
+```
+
+---
+
+## Middlewares
+
+| Middleware | Uso |
+|----------|-----|
+| `authenticate` | Verifica JWT |
+| `isSuperAdmin` | Apenas Super Admin |
+| `requireTenant` | Exige `tenantId` |
+| `isResponsavelDoAluno` | Verifica vínculo |
+
+---
+
+## Seeds
+ criar conta do super admin
+```bash
+npx tsx src/seeds/super-admin.seed.ts
+```
+
+Cria:
+```
+Email: superadmin@escolinha.com
+Senha: admin2025
+```
+
+---
+
+## Variáveis de Ambiente (`.env`)
+
+```env
+DATABASE_URL="postgresql://user:pass@localhost:5432/edupay"
+JWT_SECRET="sua-chave-super-secreta-2025"
+PORT=4000
+HOST=localhost
+```
+
+---
+
+## Comandos Úteis
+
+```bash
+# Iniciar
+npm run dev
+
+# Migração
+npx prisma migrate dev
+
+# Seed
+npx tsx src/seeds/super-admin.seed.ts
+
+#Prisma studio
+npm prismastudio
+
+# Gerar cliente Prisma
+npx prisma generate
+```
+
+---
+
+## Segurança
+
+- Senhas com **bcrypt**
+- JWT com expiração (`7d`)
+- Validação de entrada
+- Isolamento por `tenantId`
+- `@@unique([cpf, tenantId])`
+
+---
+
+## Testes de API (cURL)
+
+### Login Super Admin
+```bash
+curl -X POST http://localhost:4000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"superadmin@escolinha.com","password":"admin2025"}'
+```
+
+### Listar todos os tenants
+```bash
+curl http://localhost:4000/tenants/admin/all \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## Próximos Passos (Frontend)
+
+1. **Next.js com App Router**
+2. **Login + redirecionamento por role**
+3. **Dashboard Super Admin**
+4. **Portal do Responsável**
+5. **Geração de boletos (PDF + Pix)**
+
+---
+
+## Contribuição
+
+1. Fork o projeto
+2. Crie sua branch: `git checkout -b feature/nova-func`
+3. Commit: `git commit -m "feat: nova função"`
+4. Push: `git push origin feature/nova-func`
+5. Abra um PR
+
+---
+
+## Licença
+
+**Propriedade Intelectual - Uso Interno**
+
+---
+
+**EduPay - Transformando escolinhas em negócios profissionais**  
+*Desenvolvido com dedicação no Brasil*  
+*Atualizado em: 15 de novembro de 2025*

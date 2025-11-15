@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// === TENANT ===
+model Tenant {
+  id            String    @id @default(uuid())
+  name          String
+  slug          String    @unique
+  domain        String?
+  cpfCnpj       String?
+  plan          String    @default("basico")
+  monthlyFee    Float     @default(0)
+  createdAt     DateTime  @default(now())
+  alunos        Aluno[]
+  usuarios      Usuario[]
+  categorias    CategoriaFinanceira[]
+  movimentacoes Movimentacao[]
+  responsavel Responsavel[]
+}
+
+// === RESPONSÁVEL ===
+model Responsavel {
+  id        String   @id @default(uuid())
+  name      String
+  cpf       String   @unique
+  phone     String
+  email     String   @unique
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  usuario   Usuario? @relation("ResponsavelUsuario")
+  alunos    Aluno[]
+  createdAt DateTime @default(now())
+}
+
+// === ALUNO ===
+model Aluno {
+  id                String       @id @default(uuid())
+  name              String
+  cpf               String?
+  birthDate         DateTime?
+  phone             String?
+  usuario           Usuario?      @relation("AlunoUsuario") // 1:1 opcional
+  responsavelId     String?
+  responsavel       Responsavel? @relation(fields: [responsavelId], references: [id])
+  monthlyFee        Float        @default(0)
+  dueDay            Int          @default(10)
+  status            String       @default("ativo")
+  tenantId          String
+  tenant            Tenant       @relation(fields: [tenantId], references: [id])
+  movimentacoes     Movimentacao[]
+  mensalidades      Mensalidade[]   // <--- ADICIONE ESTA LINHA!
+  createdAt         DateTime     @default(now())
+}
+// === MENSALIDADE(ALUNOS) ===
+model Mensalidade {
+  id             String    @id @default(uuid())
+  alunoId        String
+  aluno          Aluno     @relation(fields: [alunoId], references: [id])
+  month          Int
+  year           Int
+  value          Float
+  dueDate        DateTime
+  paidAt         DateTime?
+  status         String    @default("pendente")
+  movimentacaoId String?
+  movimentacao   Movimentacao? @relation(fields: [movimentacaoId], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@unique([alunoId, month, year])
+}
+
+// === USUÁRIO (FUNCIONÁRIO) ===
+model Usuario {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       String   @default("TREINADOR")
+  tenantId   String?
+  tenant     Tenant?   @relation(fields: [tenantId], references: [id])
+  responsavel    Responsavel? @relation("ResponsavelUsuario", fields: [responsavelId], references: [id])
+  responsavelId  String?  @unique
+  aluno       Aluno?   @relation("AlunoUsuario", fields: [alunoId], references: [id])
+  alunoId     String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt      DateTime
+
+  @@index([tenantId])
+  @@index([role])
+  @@index([responsavelId])
+  @@index([alunoId])
+}
+
+// === CATEGORIA FINANCEIRA ===
+model CategoriaFinanceira {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   // "entrada" | "saida"
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  movimentacoes Movimentacao[]
+  createdAt     DateTime @default(now())
+}
+
+// === MOVIMENTAÇÃO FINANCEIRA ===
+model Movimentacao {
+  id                String             @id @default(uuid())
+  description       String
+  value             Float
+  date              DateTime
+  type              String             // "entrada" | "saida"
+  categoriaId       String
+  categoria         CategoriaFinanceira @relation(fields: [categoriaId], references: [id])
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  alunoId           String?
+  aluno             Aluno?             @relation(fields: [alunoId], references: [id])
+  mensalidades      Mensalidade[]
+  createdAt         DateTime           @default(now())
+}

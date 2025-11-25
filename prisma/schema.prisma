@@ -14,120 +14,177 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// === TENANT ===
+enum UserRole {
+  SUPER_ADMIN     // 1 único, tenantId = null
+  ADMIN           // Admin do tenant
+  TREINADOR
+  RESPONSAVEL     // Responsável que tem login
+  ALUNO           // Aluno que tem login (opcional)
+}
+
+// ==================== TENANT ====================
 model Tenant {
   id            String    @id @default(uuid())
   name          String
   slug          String    @unique
-  domain        String?
-  cpfCnpj       String?
+  domain        String?   @unique
+  cpfCnpj       String?   @unique
   plan          String    @default("basico")
   monthlyFee    Float     @default(0)
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   alunos        Aluno[]
   usuarios      Usuario[]
   categorias    CategoriaFinanceira[]
   movimentacoes Movimentacao[]
-  responsavel Responsavel[]
+  responsaveis  Responsavel[]
+
+  @@index([slug])
+  @@index([domain])
 }
 
-// === RESPONSÁVEL ===
+// ==================== USUÁRIO ====================
+model Usuario {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(TREINADOR)
+  img           String?
+  tenantId      String?   // null = Super Admin
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+
+  // Relação opcional: 1 usuário → 1 responsável (se for responsável logado)
+  responsavel   Responsavel? @relation("UsuarioResponsavel")
+  responsavelId String?      @unique
+
+  // Relação opcional: 1 usuário → 1 aluno (se aluno tiver login)
+  aluno         Aluno?       @relation("UsuarioAluno")
+  alunoId       String?      @unique
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([tenantId])
+  @@index([role])
+  @@index([email])
+}
+
+// ==================== RESPONSÁVEL ====================
 model Responsavel {
-  id        String   @id @default(uuid())
-  name      String
-  cpf       String   @unique
-  phone     String
-  email     String   @unique
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  usuario   Usuario? @relation("ResponsavelUsuario")
-  alunos    Aluno[]
-  createdAt DateTime @default(now())
+  id            String    @id @default(uuid())
+  name          String
+  cpf           String    @unique
+  phone         String
+  email         String    @unique
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  // Relação 1:1 com Usuário (opcional - só se tiver login)
+  usuario       Usuario?  @relation("UsuarioResponsavel", fields: [usuarioId], references: [id])
+  usuarioId     String?   @unique
+
+  alunos        Aluno[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
 }
 
-// === ALUNO ===
+// ==================== ALUNO ====================
 model Aluno {
-  id                String       @id @default(uuid())
-  name              String
-  cpf               String?
-  birthDate         DateTime?
-  phone             String?
-  usuario           Usuario?      @relation("AlunoUsuario") // 1:1 opcional
-  responsavelId     String?
-  responsavel       Responsavel? @relation(fields: [responsavelId], references: [id])
-  monthlyFee        Float        @default(0)
-  dueDay            Int          @default(10)
-  status            String       @default("ativo")
-  tenantId          String
-  tenant            Tenant       @relation(fields: [tenantId], references: [id])
-  movimentacoes     Movimentacao[]
-  mensalidades      Mensalidade[]   // <--- ADICIONE ESTA LINHA!
-  createdAt         DateTime     @default(now())
+  id            String    @id @default(uuid())
+  name          String
+  cpf           String?   @unique
+  birthDate     DateTime?
+  phone         String?
+  img           String?
+  monthlyFee    Float     @default(0)
+  dueDay        Int       @default(10)
+  status        String    @default("ativo") // ativo, inativo, trancado
+
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  responsavelId String?
+  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+
+  // Relação 1:1 com Usuário (opcional - só se aluno tiver login)
+  usuario       Usuario?  @relation("UsuarioAluno", fields: [usuarioId], references: [id])
+  usuarioId     String?   @unique
+
+  movimentacoes Movimentacao[]
+  mensalidades  Mensalidade[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([cpf])
 }
-// === MENSALIDADE(ALUNOS) ===
+
+// ==================== MENSALIDADE ====================
 model Mensalidade {
-  id             String    @id @default(uuid())
+  id             String       @id @default(uuid())
   alunoId        String
-  aluno          Aluno     @relation(fields: [alunoId], references: [id])
-  month          Int
+  aluno          Aluno        @relation(fields: [alunoId], references: [id])
+
+  month          Int          // 1-12
   year           Int
   value          Float
   dueDate        DateTime
   paidAt         DateTime?
-  status         String    @default("pendente")
+  status         String       @default("pendente") // pendente, pago, atrasado
+
   movimentacaoId String?
   movimentacao   Movimentacao? @relation(fields: [movimentacaoId], references: [id])
-  createdAt      DateTime  @default(now())
+
+  createdAt      DateTime     @default(now())
 
   @@unique([alunoId, month, year])
-}
-
-// === USUÁRIO (FUNCIONÁRIO) ===
-model Usuario {
-  id         String   @id @default(uuid())
-  name       String
-  email      String   @unique
-  password   String
-  role       String   @default("TREINADOR")
-  tenantId   String?
-  tenant     Tenant?   @relation(fields: [tenantId], references: [id])
-  responsavel    Responsavel? @relation("ResponsavelUsuario", fields: [responsavelId], references: [id])
-  responsavelId  String?  @unique
-  aluno       Aluno?   @relation("AlunoUsuario", fields: [alunoId], references: [id])
-  alunoId     String?  @unique
-  createdAt  DateTime @default(now())
-  updatedAt      DateTime
-
-  @@index([tenantId])
-  @@index([role])
-  @@index([responsavelId])
   @@index([alunoId])
+  @@index([status])
 }
 
-// === CATEGORIA FINANCEIRA ===
+// ==================== CATEGORIA FINANCEIRA ====================
 model CategoriaFinanceira {
   id            String   @id @default(uuid())
   name          String
-  type          String   // "entrada" | "saida"
+  type          String   // "entrada" ou "saida"
   tenantId      String
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
   movimentacoes Movimentacao[]
+
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, name]) // evita duplicatas no mesmo tenant
 }
 
-// === MOVIMENTAÇÃO FINANCEIRA ===
+// ==================== MOVIMENTAÇÃO ====================
 model Movimentacao {
-  id                String             @id @default(uuid())
-  description       String
-  value             Float
-  date              DateTime
-  type              String             // "entrada" | "saida"
-  categoriaId       String
-  categoria         CategoriaFinanceira @relation(fields: [categoriaId], references: [id])
-  tenantId          String
-  tenant            Tenant             @relation(fields: [tenantId], references: [id])
-  alunoId           String?
-  aluno             Aluno?             @relation(fields: [alunoId], references: [id])
-  mensalidades      Mensalidade[]
-  createdAt         DateTime           @default(now())
+  id           String    @id @default(uuid())
+  description  String
+  value        Float
+  date         DateTime
+  type         String    // "entrada" | "saida"
+
+  categoriaId  String
+  categoria    CategoriaFinanceira @relation(fields: [categoriaId], references: [id])
+
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+
+  alunoId      String?
+  aluno        Aluno?    @relation(fields: [alunoId], references: [id])
+
+  mensalidades Mensalidade[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([date])
+  @@index([type])
 }

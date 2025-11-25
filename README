@@ -145,6 +145,15 @@ model Aluno {
 
 ---
 
+Quem pode criar qual tipo de usuário?
+
+Quem está criandoPode criar estes tipos de usuário (role)ObservaçãoSuper AdminTodos: ADMIN, TREINADOR, AUXILIAR, RESPONSÁVEL, ALUNOGlobal (painel admin)ADMIN da escolaTREINADOR, AUXILIAR, RESPONSÁVEL, ALUNO (≥ 18 anos)Dentro do seu tenantTreinador / AuxiliarNENHUMSó visualizaResponsável (pai/mãe)NENHUMSó acessa portalAluno ≥ 18NENHUMSó acessa seu portal
+Fluxo normal de criação de usuários (o que acontece no dia a dia)
+
+
+SituaçãoQuem cria o usuário?
+Onde acontece?Cadastrar um novo treinadorADMIN da escolaPainel interno → FuncionáriosCadastrar um responsável (pai/mãe)ADMIN da escolaPainel interno → Alunos → ResponsávelAtivar conta para aluno ≥ 18 anosADMIN da escolaNo cadastro do aluno → “Criar conta”Criar um novo tenant + primeiro ADMINSuper AdminPainel global do Super Admin
+
 ## Rotas Principais
 
 ### Tenant
@@ -238,10 +247,16 @@ npx prisma migrate dev
 npx tsx src/seeds/super-admin.seed.ts
 
 #Prisma studio
-npm prismastudio
+npx prisma studio
 
 # Gerar cliente Prisma
 npx prisma generate
+
+#puchar banco 
+npx prisma db push
+
+#deletar dados do banco
+npx prisma db push --force-reset
 ```
 
 ---

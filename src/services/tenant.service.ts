@@ -116,36 +116,85 @@ async updateTenant(tenantId: string, data: {
     tenant,
   };
 }
+};
+
+//ATIVAR OU BLOQUEAR TENANT FORA DA FUNÇÃO
+
+export async function toggleTenantBlock(
+  tenantId: string,
+  block: boolean,
+  reason?: string
+): Promise<{
+  success: true;
+  message: string;
+  tenant: { id: string; name: string; isActive: boolean; blockedReason: string | null };
+}> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true, name: true },
+  });
+
+  if (!tenant) throw new Error('Tenant não encontrado');
+
+  const updated = await prisma.tenant.update({
+    where: { id: tenantId },
+    data: {
+      isActive: !block,
+      blockedAt: block ? new Date() : null,
+      blockedReason: block ? (reason || 'Bloqueado pelo administrador') : null,
+    },
+    select: {
+      id: true,
+      name: true,
+      isActive: true,
+      blockedReason: true,
+    },
+  });
+
+  return {
+    success: true,
+    message: block 
+      ? `Tenant "${updated.name}" foi BLOQUEADO.` 
+      : `Tenant "${updated.name}" foi DESBLOQUEADO.`,
+    tenant: {
+      id: updated.id,
+      name: updated.name,
+      isActive: updated.isActive,
+      blockedReason: updated.blockedReason,
+    },
+  };
+}
+
 
 //DELETAR TENANT
-/*async deleteTenant(tenantId: string): Promise<{
-    success: true;
-    message: string;
-  }> {
-    const tenantExists = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { id: true, name: true },
-    });
+export async function deleteTenant(tenantId: string) {
+    // FORÇA O TYPESCRIPT A ACEITAR COM ESTA SINTAXE:
+    return await (async function () {
+      const tenantExists = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { id: true, name: true },
+      });
 
-    if (!tenantExists) {
-      throw new Error('Tenant não encontrado');
-    }
+      if (!tenantExists) {
+        throw new Error('Tenant não encontrado');
+      }
 
-    // DELEÇÃO EM CASCATA
-    await prisma.$transaction(async (tx) => {
-      await tx.mensalidade.deleteMany({ where: { aluno: { tenantId } } });
-      await tx.movimentacao.deleteMany({ where: { tenantId } });
-      await tx.categoriaFinanceira.deleteMany({ where: { tenantId } });
-      await tx.aluno.deleteMany({ where: { tenantId } });
-      await tx.responsavel.deleteMany({ where: { tenantId } });
-      await tx.usuario.deleteMany({ where: { tenantId } });
-      await tx.tenant.delete({ where: { id: tenantId } });
-    });
+      await prisma.$transaction(async (tx) => {
+        await tx.mensalidade.deleteMany({ where: { aluno: { tenantId } } });
+        await tx.movimentacao.deleteMany({ where: { tenantId } });
+        await tx.categoriaFinanceira.deleteMany({ where: { tenantId } });
+        await tx.aluno.deleteMany({ where: { tenantId } });
+        await tx.responsavel.deleteMany({ where: { tenantId } });
+        await tx.usuario.deleteMany({ where: { tenantId } });
+        await tx.tenant.delete({ where: { id: tenantId } });
+      });
 
-    return {
-      success: true,
-      message: `Tenant "${tenantExists.name}" e todos os seus dados foram excluídos permanentemente.`,
-    };
-  },
-*/
-};
+      return {
+        success: true,
+        message: `Tenant "${tenantExists.name}" excluído com sucesso!`,
+      };
+    })();
+  }
+
+
+

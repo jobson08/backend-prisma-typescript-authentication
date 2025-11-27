@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Responsavel" ALTER COLUMN "cpf" DROP NOT NULL,
+ALTER COLUMN "email" DROP NOT NULL;

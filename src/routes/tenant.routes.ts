@@ -14,8 +14,11 @@ router.patch('/:id', tenantController.updateTenant); //api/tenants/Id
 // VERIFICAR tenant (SÓ SUPER ADMIN)
 router.get('/:id', tenantController.getTenantById); //api/tenants/Id
 
+//ATIVAR OU BLOQUEAR TENANT (SÓ SUPER ADMIN)
+router.post('/:id/block', tenantController.toggleBlockTenant);//api/tenants/Id/block
+
 //DELETAR TENANT (SÓ SUPER ADMIN)
-//router.delete('/:id', tenantController.deleteTenant); //api/tenants/Id?confirm=true
+router.delete('/:id', tenantController.deleteTenant); //api/tenants/Id?confirm=true
 
 
 export default router;

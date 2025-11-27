@@ -78,9 +78,11 @@ model Usuario {
 model Responsavel {
   id            String    @id @default(uuid())
   name          String
-  cpf           String    @unique
+  cpf           String?    @unique
   phone         String
-  email         String    @unique
+  email         String?    @unique
+  relacionamento String?
+  observations  String?
   tenantId      String
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
 

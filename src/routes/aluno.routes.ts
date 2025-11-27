@@ -1,20 +1,13 @@
-// src/routes/aluno.routes.ts (exemplo)
+// src/routes/aluno.routes.ts
 import { Router } from 'express';
-import { prisma } from '../config/database';
-import { authMiddleware } from '../middleware/auth.middleware';
-import { tenantMiddleware } from '../middleware/tenant.middleware';
+import { alunoController } from '../controllers/aluno.controller';
 
 const router = Router();
 
-// TODAS as rotas do tenant passam por aqui
-router.use(authMiddleware);        // 1º verifica o JWT
-router.use(tenantMiddleware);      // 2º garante que só acessa o próprio tenant
-
-router.get('/', async (req, res) => {
-  const alunos = await prisma.aluno.findMany({
-    where: { tenantId: req.tenantId }, // ← 100% seguro!
-  });
-  res.json(alunos);
-});
+router.post('/', alunoController.create);
+router.get('/', alunoController.getAll);           // ← LISTAR TODOS
+router.get('/:id', alunoController.getById);       // ← VER POR ID
+router.patch('/:id', alunoController.update);      // ← EDITAR
+router.delete('/:id', alunoController.delete);     // ← EXCLUIR (opcional)
 
 export default router;

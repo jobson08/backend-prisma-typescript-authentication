@@ -104,6 +104,7 @@ model Aluno {
   cpf           String?   @unique
   birthDate     DateTime?
   phone         String?
+  observations  String?
   img           String?
   monthlyFee    Float     @default(0)
   dueDay        Int       @default(10)

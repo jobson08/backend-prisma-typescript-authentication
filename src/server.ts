@@ -35,7 +35,7 @@ app.get('/', (req: Request, res: Response ) => {
 // ROTAS PROTEGIDAS (precisam de JWT + tenant)
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', authMiddleware, tenantMiddleware, usuarioRoutes);
-//app.use('/api/alunos', authMiddleware, tenantMiddleware, alunoRoutes);
+app.use('/api/alunos', authMiddleware, tenantMiddleware, alunoRoutes);
 app.use('/api/tenants', authMiddleware, tenantMiddleware, tenantRoutes);
 app.use('/api/responsaveis', authMiddleware, tenantMiddleware, responsavelRoutes);
 //app.use('/api/movimentacoes', authMiddleware, tenantMiddleware, movimentacaoRoutes);

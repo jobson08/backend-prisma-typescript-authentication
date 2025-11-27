@@ -5,6 +5,8 @@ import usuarioRoutes from './routes/usuario.routes';
 import { authMiddleware } from './middleware/auth.middleware';
 import { tenantMiddleware } from './middleware/tenant.middleware';
 import alunoRoutes from './routes/aluno.routes';
+import tenantRoutes from './routes/tenant.routes';
+import authRoutes from './routes/auth.routes';
 //import dotenv from "dotenv";
 //import cors from "cors";
 //import morgan from "morgan";
@@ -31,8 +33,10 @@ app.get('/', (req: Request, res: Response ) => {
 });
 
 // ROTAS PROTEGIDAS (precisam de JWT + tenant)
+app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', authMiddleware, tenantMiddleware, usuarioRoutes);
-app.use('/api/alunos', authMiddleware, tenantMiddleware, alunoRoutes);
+//app.use('/api/alunos', authMiddleware, tenantMiddleware, alunoRoutes);
+app.use('/api/tenants', authMiddleware, tenantMiddleware, tenantRoutes);
 //app.use('/api/responsaveis', authMiddleware, tenantMiddleware, responsavelRoutes);
 //app.use('/api/movimentacoes', authMiddleware, tenantMiddleware, movimentacaoRoutes);
 //app.use('/api/mensalidades', authMiddleware, tenantMiddleware, mensalidadeRoutes);

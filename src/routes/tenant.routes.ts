@@ -18,7 +18,13 @@ router.get('/:id', tenantController.getTenantById); //api/tenants/Id
 router.post('/:id/block', tenantController.toggleBlockTenant);//api/tenants/Id/block
 
 //DELETAR TENANT (SÓ SUPER ADMIN)
-router.delete('/:id', tenantController.deleteTenant); //api/tenants/Id?confirm=true
+//router.delete('/:id', tenantController.deleteTenant); //api/tenants/Id?confirm=true
+
+//editar usuario tenant
+router.patch('/:tenantId/admin-usuario', tenantController.editarAdminUsuario); //api/tenants/tenantID/admin-usuario
+
+//buscar tenant com usuario ID
+router.get('/:tenantId/admin-usuario', tenantController.getAdminUsuario); //api/tenants/tenantID/admin-usuario
 
 
 export default router;

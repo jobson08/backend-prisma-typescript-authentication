@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { tenantService, toggleTenantBlock, deleteTenant  } from '../services/tenant.service';
+import { tenantService} from '../services/tenant.service';
 
 export const tenantController = {
     async getAllTenants(req: Request, res: Response) {
@@ -83,58 +83,97 @@ async updateTenant(req: Request, res: Response) {
     }
   },
 
-  
+  //editar usuario tenant
+  async editarAdminUsuario(req: Request, res: Response) {
+  if (req.user.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ success: false, error: 'Acesso negado' });
+  }
 
-  //DELETAR TENANT
- async deleteTenant(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-
-      // Só Super Admin
-      if (req.user.role !== 'SUPER_ADMIN') {
-        return res.status(403).json({
-          success: false,
-          error: 'Apenas Super Admin pode excluir tenants',
-        });
-      }
-
-      // Confirmação obrigatória
-      const confirm = req.query.confirm === 'true';
-      if (!confirm) {
-        return res.status(400).json({
-          success: false,
-          error: 'Confirmação necessária',
-          message: 'Adicione ?confirm=true na URL para confirmar a exclusão permanente',
-        });
-      }
-
-      // CHAMA A FUNÇÃO QUE VOCÊ CRIOU FORA DO OBJETO
-      const result = await deleteTenant(id);
-
-      return res.json(result);
-    } catch (error: any) {
-      if (error.message === 'Tenant não encontrado') {
-        return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
-      }
-      console.error('Erro ao deletar tenant:', error);
-      return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-    }
-  },
-
-//ATIVAR OU BLOQUEAR TENANT
-async toggleBlockTenant(req: Request, res: Response) {
   try {
-    const { id } = req.params;
-    const { block, reason } = req.body;
+    const { tenantId } = req.params;
+    const { email, password, isActive } = req.body;
 
-    if (req.user.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ success: false, error: 'Acesso negado' });
-    }
+    const resultado = await tenantService.editarUsuarioAdminDoTenant(tenantId, {
+      email,
+      password,
+      isActive,
+    });
 
-    const result = await toggleTenantBlock(id, block, reason);
-    return res.json(result);
+    return res.json(resultado);
   } catch (error: any) {
-    return res.status(404).json({ success: false, error: error.message });
+    return res.status(400).json({ success: false, error: error.message });
   }
 },
+  
+    //buscar teneat com usuario ID
+    async getAdminUsuario(req: Request, res: Response) {
+      if (req.user.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+
+      try {
+        const { tenantId } = req.params;
+        const resultado = await tenantService.getAdminUsuarioDoTenant(tenantId);
+        return res.json(resultado);
+      } catch (error: any) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+    },
+  
+//ATIVAR OU BLOQUEAR TENANT
+async toggleBlockTenant(req: Request, res: Response) {
+  const { id } = req.params;
+  const { block, reason } = req.body;
+
+  if (req.user.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  const result = await tenantService.toggleTenantBlock(id, block, reason);
+  return res.json(result);
+},
+
+/*
+//DELETAR TENANT
+ async deleteTenant(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    // Só Super Admin pode deletar
+    if (req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Acesso negado. Apenas Super Admin pode excluir tenants.',
+      });
+    }
+
+    // CONFIRMAÇÃO OBRIGATÓRIA (segurança extra!)
+    const confirm = req.query.confirm === 'true';
+    if (!confirm) {
+      return res.status(400).json({
+        success: false,
+        error: 'Confirmação necessária',
+        warning: 'Esta ação é IRREVERSÍVEL. Todos os dados do tenant serão apagados.',
+        hint: 'Adicione ?confirm=true na URL para confirmar',
+      });
+    }
+
+    const result = await tenantService.deleteTenant(id);
+
+    return res.json(result);
+  } catch (error: any) {
+    if (error.message === 'Tenant não encontrado') {
+      return res.status(404).json({
+      success: false,
+      error: 'Tenant não encontrado',
+    });
+
+    console.error('Erro ao deletar tenant:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erro ao excluir tenant',
+    });
+  }
+}
+*/
 };

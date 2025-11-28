@@ -6,7 +6,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 
 // Super Admin cria tenant + admin do tenant
-router.post('/tenant', authMiddleware, usuarioController.createTenantWithAdmin);
+router.post('/tenant', authMiddleware, usuarioController.createTenantWithAdmin); // api/usuarios/tenant
 
 // Outras rotas que você já tem
 // router.get('/', ...)

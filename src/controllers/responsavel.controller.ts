@@ -20,6 +20,76 @@ export const responsavelController = {
     }
   },
 
+  //controle criação do usuario responsavel
+
+  async criarUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params; // id do responsável
+    const tenantId = req.tenantId!;
+    const { email, password, sendEmail = false } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'E-mail e senha são obrigatórios',
+      });
+    }
+
+    const resultado = await responsavelService.criarUsuarioParaResponsavel(id, tenantId, {
+      email,
+      password,
+      sendEmail,
+    });
+
+    return res.status(201).json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+},
+
+//editar usuario responsavel
+async editarUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params; // id do responsável
+    const tenantId = req.tenantId!;
+    const { email, password, isActive } = req.body;
+
+    if (!email && !password && isActive === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Envie pelo menos um campo para atualizar',
+      });
+    }
+
+    const resultado = await responsavelService.editarUsuarioDoResponsavel(id, tenantId, {
+      email,
+      password,
+      isActive,
+    });
+
+    return res.json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+},
+//buscar responsavrl com usuario ID
+async temUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId!;
+
+    const resultado = await responsavelService.temUsuario(id, tenantId);
+    return res.json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+},
   // Listar todos
   async getAll(req: Request, res: Response) {
     const tenantId = req.tenantId!;

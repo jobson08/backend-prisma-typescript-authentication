@@ -5,6 +5,7 @@ import { createAlunoSchema, updateAlunoSchema} from '../dto/create-aluno.dto';
 import { ZodError } from 'zod';
 
 export const alunoController = {
+  //cadastar aluno
   async create(req: Request, res: Response) {
     try {
       const dto = createAlunoSchema.parse(req.body);
@@ -24,6 +25,72 @@ export const alunoController = {
     }
   },
 
+  //cria usuario alunos
+  async criarUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId!;
+    const { email, password, sendEmail = false } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'E-mail e senha obrigatórios' });
+    }
+
+    const resultado = await alunoService.criarUsuarioParaAluno(id, tenantId, {
+      email,
+      password,
+      sendEmail,
+    });
+
+    return res.status(201).json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+},
+
+//editar usuario aluno
+async editarUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params; // id do aluno
+    const tenantId = req.tenantId!;
+    const { email, password, isActive } = req.body;
+
+    if (!email && !password && isActive === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Envie pelo menos um campo para atualizar',
+      });
+    }
+
+    const resultado = await alunoService.editarUsuarioDoAluno(id, tenantId, {
+      email,
+      password,
+      isActive,
+    });
+
+    return res.json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+},
+
+//buscar usuario aluno ID
+async temUsuario(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId!;
+
+    const resultado = await alunoService.temUsuario(id, tenantId);
+    return res.json(resultado);
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+},
+
+//verificar todos alunos
  async getAll(req: Request, res: Response) {
     try {
       const tenantId = req.tenantId!;

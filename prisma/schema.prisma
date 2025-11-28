@@ -57,6 +57,7 @@ model Usuario {
   img           String?
   tenantId      String?   // null = Super Admin
   tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  isActive      Boolean   @default(true)
 
   // Relação opcional: 1 usuário → 1 responsável (se for responsável logado)
   responsavel   Responsavel? @relation("UsuarioResponsavel")

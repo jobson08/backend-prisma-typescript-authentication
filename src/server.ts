@@ -3,18 +3,21 @@ import { prisma } from './config/database';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware, roleGuard } from './middleware/auth.middleware';
 //import dotenv from "dotenv";
-//import cors from "cors";
-//import morgan from "morgan";
+import cors from "cors";
+import morgan from "morgan";
+import superadminRoutes from './routes/superadmin.routes';
 //import helmet from 'helmet';
 
 const app = express();
 
-//app.use(morgan("tiny"));
+app.use(morgan("tiny"));
 
-/*app.use(cors({ 
-    origin: ['http://localhost:400],
- })
-);*/
+app.use(cors({
+  origin: 'http://localhost:3000', // ← origem do seu Next.js
+  credentials: true, // se usar cookies no futuro
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 //app.use(helmet());
 
@@ -25,11 +28,10 @@ app.get('/', (req: Request, res: Response ) => {
 });
 
 // Rotas públicas
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes); 
 
 // ROTAS PROTEGIDAS (precisam de JWT + tenant)
-
-//app.use('/api/v1/superadmin', authMiddleware, roleGuard('SUPERADMIN'), superadminRoutes);
+app.use('/api/v1/superadmin', authMiddleware, roleGuard('SUPERADMIN'), superadminRoutes);
 //app.use('/api/v1/admin', authMiddleware, roleGuard('ADMIN'), tenantGuard, adminRoutes);
 
 

@@ -3,13 +3,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET não está definido no .env');
 }
 
-// Tipos de usuário e roles
 export type UserRole = 
   | 'SUPERADMIN'
   | 'ADMIN'
@@ -24,7 +23,7 @@ export interface AuthUser {
   email: string;
   name: string | null;
   role: UserRole;
-  tenantId: string | null; // null para SUPERADMIN
+  tenantId: string | null; // mantemos como tenantId no frontend (nome lógico)
   escolinha?: {
     id: string;
     nome: string;
@@ -32,7 +31,6 @@ export interface AuthUser {
   } | null;
 }
 
-// Extensão do Request para TypeScript
 declare global {
   namespace Express {
     interface Request {
@@ -41,7 +39,6 @@ declare global {
   }
 }
 
-// Middleware de autenticação principal
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
@@ -52,10 +49,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   const token = authHeader.split(' ')[1];
 
   try {
-    // Decodifica o JWT
     const payload = jwt.verify(token, JWT_SECRET) as { id: string; exp: number; iat: number };
 
-    // Busca o usuário no banco com dados da escolinha (se existir)
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {
@@ -63,7 +58,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         email: true,
         name: true,
         role: true,
-        tenantId: true,
+        img: true,
+        escolinhaId: true, // ← CAMPO CORRETO DO SCHEMA!
         escolinha: {
           select: {
             id: true,
@@ -78,13 +74,13 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return res.status(401).json({ error: 'Usuário não encontrado' });
     }
 
-    // Monta o objeto user no request
+    // Monta req.user (tenantId continua sendo o nome lógico)
     req.user = {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role as UserRole,
-      tenantId: user.tenantId,
+      tenantId: user.escolinhaId, // ← mapeia escolinhaId → tenantId
       escolinha: user.escolinha
         ? {
             id: user.escolinha.id,
@@ -101,7 +97,6 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// Middleware para proteger por role específico
 export const roleGuard = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -116,7 +111,6 @@ export const roleGuard = (...allowedRoles: UserRole[]) => {
   };
 };
 
-// Middleware para garantir que o usuário tenha escolinha (exceto SuperAdmin)
 export const tenantGuard = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Não autenticado' });

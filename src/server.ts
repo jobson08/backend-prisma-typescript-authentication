@@ -1,19 +1,11 @@
 import express, { Request, Response, NextFunction, request } from 'express';
 import { prisma } from './config/database';
-import usuarioRoutes from './routes/usuario.routes';
 import authRoutes from './routes/auth.routes';
-import { authMiddleware } from './middleware/auth.middleware';
-import { tenantMiddleware } from './middleware/tenant.middleware';
-import alunoRoutes from './routes/aluno.routes';
-import tenantRoutes from './routes/tenant.routes';
-import responsavelRoutes from './routes/responsavel.routes';
+import { authMiddleware, roleGuard } from './middleware/auth.middleware';
 //import dotenv from "dotenv";
 //import cors from "cors";
 //import morgan from "morgan";
 //import helmet from 'helmet';
-
-
-
 
 const app = express();
 
@@ -32,16 +24,13 @@ app.get('/', (req: Request, res: Response ) => {
     return res.json("Bem vindo ao sividor escolina futebol");
 });
 
-// ROTAS PROTEGIDAS (precisam de JWT + tenant)
-app.use('/api/auth', authRoutes);
-app.use('/api/usuarios', authMiddleware, tenantMiddleware, usuarioRoutes);
-app.use('/api/alunos', authMiddleware, tenantMiddleware, alunoRoutes);
-app.use('/api/tenants', authMiddleware, tenantMiddleware, tenantRoutes);
-app.use('/api/responsaveis', authMiddleware, tenantMiddleware, responsavelRoutes);
-//app.use('/api/movimentacoes', authMiddleware, tenantMiddleware, movimentacaoRoutes);
-//app.use('/api/mensalidades', authMiddleware, tenantMiddleware, mensalidadeRoutes);
-//app.use('/api/categorias', authMiddleware, tenantMiddleware, categoriaRoutes);
+// Rotas públicas
+app.use('/api/v1/auth', authRoutes);
 
+// ROTAS PROTEGIDAS (precisam de JWT + tenant)
+
+//app.use('/api/v1/superadmin', authMiddleware, roleGuard('SUPERADMIN'), superadminRoutes);
+//app.use('/api/v1/admin', authMiddleware, roleGuard('ADMIN'), tenantGuard, adminRoutes);
 
 
 const PORT = process.env.PORT || 4000;

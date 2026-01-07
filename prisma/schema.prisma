@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -14,184 +8,382 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  SUPER_ADMIN     // 1 único, tenantId = null
-  ADMIN           // Admin do tenant
+enum Role {
+  SUPERADMIN
+  ADMIN
   TREINADOR
-  RESPONSAVEL     // Responsável que tem login
-  ALUNO           // Aluno que tem login (opcional)
-}
-
-// ==================== TENANT ====================
-model Tenant {
-  id            String    @id @default(uuid())
-  name          String
-  slug          String    @unique
-  domain        String?   @unique
-  cpfCnpj       String?   @unique
-  plan          String    @default("basico")
-  monthlyFee    Float     @default(0)
-  isActive      Boolean  @default(true)     // ← NOVO CAMPO
-  blockedAt     DateTime?                   // ← quando foi bloqueado
-  blockedReason String?                    // ← motivo (ex: "Pagamento atrasado")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  alunos        Aluno[]
-  usuarios      Usuario[]
-  categorias    CategoriaFinanceira[]
-  movimentacoes Movimentacao[]
-  responsaveis  Responsavel[]
-
-  @@index([slug])
-  @@index([domain])
+  RESPONSAVEL
+  ALUNO_FUTEBOL
+  ALUNO_CROSSFIT
+  FUNCIONARIO
 }
 
 // ==================== USUÁRIO ====================
-model Usuario {
-  id            String    @id @default(uuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          UserRole  @default(TREINADOR)
-  img           String?
-  tenantId      String?   // null = Super Admin
-  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
-  isActive      Boolean   @default(true)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String // ← ADICIONE ESTE CAMPO!
+  role      Role
+  img       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Relação opcional: 1 usuário → 1 responsável (se for responsável logado)
-  responsavel   Responsavel? @relation("UsuarioResponsavel")
-  responsavelId String?      @unique
-
-  // Relação opcional: 1 usuário → 1 aluno (se aluno tiver login)
-  aluno         Aluno?       @relation("UsuarioAluno")
-  alunoId       String?      @unique
-
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  @@index([tenantId])
-  @@index([role])
-  @@index([email])
+  // Relações
+  escolinha     Escolinha?       @relation(fields: [escolinhaId], references: [id])
+  escolinhaId   String?
+  alunoFutebol  AlunoFutebol?
+  alunoCrossfit ClienteCrossfit?
+  responsavel   Responsavel?
+  funcionario   Funcionario?
 }
 
-// ==================== RESPONSÁVEL ====================
-model Responsavel {
-  id            String    @id @default(uuid())
-  name          String
-  cpf           String?    @unique
-  phone         String
-  email         String?    @unique
-  relacionamento String?
-  observations  String?
-  tenantId      String
-  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+// ==================== PLANOS SAAS ====================
+model PlanoSaaS {
+  id           String   @id @default(uuid())
+  nome         String
+  slug         String   @unique
+  valorMensal  Float
+  valorAnual   Float?
+  limiteAlunos Int?
+  features     String[]
+  ativo        Boolean  @default(true)
+  ordem        Int
 
-  // Relação 1:1 com Usuário (opcional - só se tiver login)
-  usuario       Usuario?  @relation("UsuarioResponsavel", fields: [usuarioId], references: [id])
-  usuarioId     String?   @unique
+  escolinhas Escolinha[]
 
-  alunos        Aluno[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([tenantId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// ==================== ALUNO ====================
-model Aluno {
-  id            String    @id @default(uuid())
-  name          String
-  cpf           String?   @unique
-  birthDate     DateTime?
-  phone         String?
-  observations  String?
-  img           String?
-  monthlyFee    Float     @default(0)
-  dueDay        Int       @default(10)
-  status        String    @default("ativo") // ativo, inativo, trancado
-
-  tenantId      String
-  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+// ==================== PAGAMENTOS ====================
+model Pagamento {
+  id          String    @id @default(uuid())
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
 
   responsavelId String?
   responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
 
-  // Relação 1:1 com Usuário (opcional - só se aluno tiver login)
-  usuario       Usuario?  @relation("UsuarioAluno", fields: [usuarioId], references: [id])
-  usuarioId     String?   @unique
+  valor          Float
+  dataPagamento  DateTime @default(now())
+  metodo         String
+  tipo           String // "mensalidade_futebol", "mensalidade_crossfit", "aula_extra", "saas"
+  referenciaId   String
+  status         String   @default("confirmado")
+  comprovanteUrl String?
 
-  movimentacoes Movimentacao[]
-  mensalidades  Mensalidade[]
+  createdAt            DateTime              @default(now())
+  aulaExtras           AulaExtra[]
+  mensalidadeCrossfits MensalidadeCrossfit[]
+  mensalidadeFutebols  MensalidadeFutebol[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([tenantId])
-  @@index([cpf])
+  @@index([escolinhaId, dataPagamento])
+  @@index([tipo])
 }
 
-// ==================== MENSALIDADE ====================
-model Mensalidade {
-  id             String       @id @default(uuid())
-  alunoId        String
-  aluno          Aluno        @relation(fields: [alunoId], references: [id])
+// ==================== ESCOLINHA ====================
+model Escolinha {
+  id       String  @id @default(uuid())
+  nome     String
+  endereco String?
+  logoUrl  String?
 
-  month          Int          // 1-12
-  year           Int
-  value          Float
-  dueDate        DateTime
-  paidAt         DateTime?
-  status         String       @default("pendente") // pendente, pago, atrasado
+  // DOCUMENTO DA ESCOLINHA
+  tipoDocumento   String? // "cpf" ou "cnpj"
+  documento       String? @unique
+  nomeResponsavel String?
+  emailContato    String?
+  telefone        String?
 
-  movimentacaoId String?
-  movimentacao   Movimentacao? @relation(fields: [movimentacaoId], references: [id])
+  // PLANO SAAS (o que a escolinha paga ao FutElite — configurável no painel dela)
+  planoSaaS           String // "basico", "pro", "enterprise" — escolhido pela escolinha
+  valorPlanoMensal    Float // valor atual do plano (ex: 150.00, 300.00, 500.00)
+  dataInicioPlano     DateTime?
+  dataProximoCobranca DateTime?
+  statusPagamentoSaaS String    @default("ativo") // ativo, atrasado, suspenso, cancelado
 
-  createdAt      DateTime     @default(now())
+  // VALORES QUE A ESCOLINHA COBRA DOS ALUNOS (CONFIGURÁVEIS NO PAINEL DA ESCOLINHA)
+  valorMensalidadeFutebol  Float // OBRIGATÓRIO — admin define no painel
+  valorMensalidadeCrossfit Float? // OPCIONAL — só se crossfitAtivo = true
+  valorAulaExtraPadrao     Float? // OPCIONAL — valor base para aulas extras
+  diaVencimento            Int // Dia do mês que vence (1 a 31)
 
-  @@unique([alunoId, month, year])
-  @@index([alunoId])
-  @@index([status])
+  // MÓDULOS
+  aulasExtrasAtivas Boolean @default(false)
+  crossfitAtivo     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  users                User[]
+  alunosFutebol        AlunoFutebol[]
+  alunosCrossfit       ClienteCrossfit[]
+  funcionarios         Funcionario[]
+  responsaveis         Responsavel[]
+  treinos              Treino[]
+  aulasExtras          AulaExtra[]
+  mensalidadesFutebol  MensalidadeFutebol[]
+  mensalidadesCrossfit MensalidadeCrossfit[]
+  pagamentos           Pagamento[]
+
+  planoSaaSs PlanoSaaS[]
+
+  presencas Presenca[]
+
+  presencaCrossfits PresencaCrossfit[]
+
+  avaliacaos Avaliacao[]
 }
 
-// ==================== CATEGORIA FINANCEIRA ====================
-model CategoriaFinanceira {
-  id            String   @id @default(uuid())
-  name          String
-  type          String   // "entrada" ou "saida"
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  movimentacoes Movimentacao[]
+// ==================== FUNCIONÁRIO ====================
+model Funcionario {
+  id       String  @id @default(uuid())
+  nome     String
+  cargo    String // "treinador", "admin", "secretaria", etc
+  salario  Float?
+  fotoUrl  String?
+  telefone String?
+  email    String? @unique
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([tenantId, name]) // evita duplicatas no mesmo tenant
+  // Relações
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+  escolinhaId String
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String? @unique
+
+  treinos     Treino[]
+  avaliacoes  Avaliacao[]
+  aulasExtras AulaExtra[]
 }
 
-// ==================== MOVIMENTAÇÃO ====================
-model Movimentacao {
-  id           String    @id @default(uuid())
-  description  String
-  value        Float
-  date         DateTime
-  type         String    // "entrada" | "saida"
+// ==================== ALUNO FUTEBOL ====================
+model AlunoFutebol {
+  id             String   @id @default(uuid())
+  nome           String
+  cpf            String?  @unique
+  idade          Int
+  categoria      String
+  fotoUrl        String?
+  frequenciaMes  Int      @default(0)
+  mediaAvaliacao Float    @default(0)
+  createdAt      DateTime @default(now())
 
-  categoriaId  String
-  categoria    CategoriaFinanceira @relation(fields: [categoriaId], references: [id])
+  escolinha     Escolinha            @relation(fields: [escolinhaId], references: [id])
+  escolinhaId   String
+  responsavel   Responsavel          @relation(fields: [responsavelId], references: [id])
+  responsavelId String
+  avaliacoes    Avaliacao[]
+  presencas     Presenca[]
+  mensalidades  MensalidadeFutebol[]
+  user          User?                @relation(fields: [userId], references: [id])
+  userId        String?              @unique
 
-  tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  aulaExtras AulaExtra[]
+}
 
-  alunoId      String?
-  aluno        Aluno?    @relation(fields: [alunoId], references: [id])
+// ==================== ALUNO CROSSFIT ====================
+model ClienteCrossfit {
+  id         String   @id @default(uuid())
+  nome       String
+  cpf        String?  @unique
+  email      String   @unique
+  fotoUrl    String?
+  frequencia Int      @default(0)
+  createdAt  DateTime @default(now())
 
-  mensalidades Mensalidade[]
+  escolinha    Escolinha             @relation(fields: [escolinhaId], references: [id])
+  escolinhaId  String
+  presencas    PresencaCrossfit[]
+  mensalidades MensalidadeCrossfit[]
+  user         User?                 @relation(fields: [userId], references: [id])
+  userId       String?               @unique
+}
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+// ==================== RESPONSÁVEL ====================
+model Responsavel {
+  id        String   @id @default(uuid())
+  nome      String
+  cpf       String?  @unique
+  email     String   @unique
+  telefone  String?
+  fotoUrl   String?
+  createdAt DateTime @default(now())
 
-  @@index([tenantId])
-  @@index([date])
-  @@index([type])
+  escolinha   Escolinha      @relation(fields: [escolinhaId], references: [id])
+  escolinhaId String
+  filhos      AlunoFutebol[]
+  pagamentos  Pagamento[]
+  user        User?          @relation(fields: [userId], references: [id])
+  userId      String?        @unique
+}
+
+// ==================== FINANCEIRO ====================
+model MensalidadeFutebol {
+  id              String       @id @default(uuid())
+  alunoId         String
+  aluno           AlunoFutebol @relation(fields: [alunoId], references: [id])
+  escolinhaId     String
+  escolinha       Escolinha    @relation(fields: [escolinhaId], references: [id])
+  mesReferencia   DateTime
+  valor           Float
+  dataVencimento  DateTime
+  dataPagamento   DateTime?
+  status          String       @default("pendente")
+  metodoPagamento String?
+  pagamentoId     String?
+  pagamento       Pagamento?   @relation(fields: [pagamentoId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([alunoId, mesReferencia])
+}
+
+// ==================== MENSALIDADE CROSSFIT ====================
+model MensalidadeCrossfit {
+  id              String          @id @default(uuid())
+  clienteId       String
+  cliente         ClienteCrossfit @relation(fields: [clienteId], references: [id])
+  escolinhaId     String
+  escolinha       Escolinha       @relation(fields: [escolinhaId], references: [id])
+  mesReferencia   DateTime
+  valor           Float
+  dataVencimento  DateTime
+  dataPagamento   DateTime?
+  status          String          @default("pendente")
+  metodoPagamento String?
+  pagamentoId     String?
+  pagamento       Pagamento?      @relation(fields: [pagamentoId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([clienteId, mesReferencia])
+}
+
+// ==================== AULAS EXTRAS ====================
+model AulaExtra {
+  id     String   @id @default(uuid())
+  data   DateTime
+  hora   String
+  tipo   String
+  valor  Float
+  status String   @default("agendada")
+
+  alunoId String
+  aluno   AlunoFutebol @relation(fields: [alunoId], references: [id])
+
+  treinadorId String?
+  treinador   Funcionario? @relation(fields: [treinadorId], references: [id])
+
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  pagamentoId String?
+  pagamento   Pagamento? @relation(fields: [pagamentoId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== TREINO ====================
+model Treino {
+  id         String   @id @default(uuid())
+  nome       String
+  descricao  String?
+  data       DateTime
+  horaInicio String
+  horaFim    String
+  categoria  String
+  local      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+  escolinhaId String
+
+  treinador   Funcionario @relation(fields: [treinadorId], references: [id])
+  treinadorId String
+
+  presencas Presenca[]
+}
+
+// ==================== PRESENÇA FUTEBOL ====================
+model Presenca {
+  id       String   @id @default(uuid())
+  presente Boolean  @default(false)
+  data     DateTime @default(now())
+
+  // Relação direta com aluno
+  alunoId String
+  aluno   AlunoFutebol @relation(fields: [alunoId], references: [id])
+
+  // Relação direta com treino
+  treinoId String
+  treino   Treino @relation(fields: [treinoId], references: [id])
+
+  // Relação DIRETA com a escolinha (para relatórios rápidos)
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([alunoId, treinoId])
+  @@index([escolinhaId, data]) // para relatórios de frequência por mês/escolinha
+}
+
+// ==================== PRESENÇA CROSSFIT ====================
+model PresencaCrossfit {
+  id   String   @id @default(uuid())
+  data DateTime @default(now())
+
+  // Relação direta com cliente
+  clienteId String
+  cliente   ClienteCrossfit @relation(fields: [clienteId], references: [id])
+
+  // Relação DIRETA com a escolinha
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([clienteId, data])
+  @@index([escolinhaId, data]) // relatórios CrossFit por mês
+}
+
+// ==================== AVALIAÇÃO ====================
+model Avaliacao {
+  id                     String   @id @default(uuid())
+  notaControleBola       Float
+  notaPasse              Float
+  notaDrible             Float
+  notaFinalizacao        Float
+  notaCondicionamento    Float
+  notaInteligenciaTatica Float
+  notaComportamento      Float
+  media                  Float
+  comentario             String?
+  data                   DateTime @default(now())
+
+  // Relação com aluno
+  alunoId String
+  aluno   AlunoFutebol @relation(fields: [alunoId], references: [id])
+
+  // Relação com treinador
+  treinadorId String
+  treinador   Funcionario @relation(fields: [treinadorId], references: [id])
+
+  // Relação DIRETA com a escolinha
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([escolinhaId, data]) // relatórios de evolução por período
 }

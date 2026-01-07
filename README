@@ -1,5 +1,6 @@
-# **EduPay - Backend SaaS Multi-Tenant**  
-*Escolinhas de Futebol com Gestão Financeira, Alunos e Portais Personalizados*
+# **EduPay - Backend SaaS Multi-Tenant**
+
+_Escolinhas de Futebol com Gestão Financeira, Alunos e Portais Personalizados_
 
 ---
 
@@ -19,15 +20,15 @@
 
 ## Tecnologias
 
-| Camada | Tecnologia |
-|-------|------------|
-| Backend | Node.js + Express |
-| Linguagem | TypeScript |
-| ORM | Prisma ORM |
-| Banco de Dados | PostgreSQL |
-| Autenticação | JWT + bcrypt |
-| Arquitetura | Modular (por domínio) |
-| Documentação | Swagger (OpenAPI) |
+| Camada         | Tecnologia            |
+| -------------- | --------------------- |
+| Backend        | Node.js + Express     |
+| Linguagem      | TypeScript            |
+| ORM            | Prisma ORM            |
+| Banco de Dados | PostgreSQL            |
+| Autenticação   | JWT + bcrypt          |
+| Arquitetura    | Modular (por domínio) |
+| Documentação   | Swagger (OpenAPI)     |
 
 ---
 
@@ -52,71 +53,124 @@ src/
 
 ---
 
+```bash
 ## Modelos Principais (`schema.prisma`)
 
-```prisma
-model Tenant {
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  role          Role
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relações
+  escolinha     Escolinha? @relation(fields: [escolinhaId], references: [id])
+  escolinhaId   String?
+  aluno         AlunoFutebol?
+  alunoCrossfit ClienteCrossfit?
+  responsavel   Responsavel?
+  funcionario   Funcionario?
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  TREINADOR
+  RESPONSAVEL
+  ALUNO_FUTEBOL
+  ALUNO_CROSSFIT
+  FUNCIONARIO
+}
+
+// ESCOLINHA COM LOGO
+model Escolinha {
+  id                   String    @id @default(uuid())
+  nome                 String
+  endereco             String?
+  logoUrl              String?   // ← URL da logo da escolinha (upload no Supabase Storage ou Cloudinary)
+  aulasExtrasAtivas    Boolean   @default(false)
+  crossfitAtivo        Boolean   @default(false)
+  planoSaaS            String    @default("basico")
+  statusPagamento      String    @default("ativo")
+  createdAt            DateTime  @default(now())
+
+  // Relações
+  users                User[]
+  alunosFutebol        AlunoFutebol[]
+  alunosCrossfit       ClienteCrossfit[]
+  funcionarios         Funcionario[]
+  responsaveis         Responsavel[]
+  treinos              Treino[]
+  aulasExtras          AulaExtra[]
+}
+
+// ALUNO FUTEBOL COM FOTO
+model AlunoFutebol {
+  id              String   @id @default(uuid())
+  nome            String
+  idade           Int
+  categoria       String
+  fotoUrl         String?  // ← Foto do aluno (upload no storage)
+  frequenciaMes   Int      @default(0)
+  mediaAvaliacao  Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  // Relações
+  escolinha       Escolinha @relation(fields: [escolinhaId], references: [id])
+  escolinhaId     String
+  responsavel     Responsavel @relation(fields: [responsavelId], references: [id])
+  responsavelId   String
+  avaliacoes      Avaliacao[]
+  presencas       Presenca[]
+  user            User?     @relation(fields: [userId], references: [id])
+  userId          String?   @unique
+}
+
+// ALUNO CROSSFIT COM FOTO
+model ClienteCrossfit {
   id           String   @id @default(uuid())
-  name         String
-  slug         String   @unique
-  plan         String   // basico | premium
-  status       String   @default("ACTIVE") // ACTIVE, BLOCKED
+  nome         String
+  email        String   @unique
+  fotoUrl      String?  // ← Foto do cliente CrossFit
+  frequencia   Int      @default(0)
   createdAt    DateTime @default(now())
 
-  usuarios     Usuario[]
-  alunos       Aluno[]
-  responsaveis Responsavel[]
+  // Relações
+  escolinha    Escolinha @relation(fields: [escolinhaId], references: [id])
+  escolinhaId  String
+  presencas    PresencaCrossfit[]
+  pagamentos   PagamentoCrossfit[]
+  user         User?     @relation(fields: [userId], references: [id])
+  userId       String?   @unique
 }
 
-model Usuario {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  password       String
-  name           String
-  role           String   // SUPER_ADMIN, ADMIN, TREINADOR, AUXILIAR, RESPONSAVEL, ALUNO
-  tenantId       String?
-  tenant         Tenant?  @relation(fields: [tenantId], references: [id])
-
-  responsavel    Responsavel? @relation("ResponsavelUsuario", fields: [responsavelId], references: [id])
-  responsavelId  String?      @unique
-  aluno          Aluno?       @relation("AlunoUsuario", fields: [alunoId], references: [id])
-  alunoId        String?      @unique
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([role])
-}
-
+// RESPONSÁVEL COM FOTO
 model Responsavel {
   id         String   @id @default(uuid())
-  name       String
-  cpf        String
-  phone      String
-  email      String
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  nome       String
+  email      String   @unique
+  telefone   String?
+  fotoUrl    String?  // ← Foto do responsável (pai/mãe)
+  createdAt  DateTime @default(now())
 
-  usuario    Usuario? @relation("ResponsavelUsuario")
-  alunos     Aluno[]  @relation("ResponsavelAlunos")
-
-  @@unique([cpf, tenantId])
-}
-
-model Aluno {
-  id              String   @id @default(uuid())
-  name            String
-  birthDate       DateTime?
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
-  responsavelId   String?
-  responsavel     Responsavel? @relation("ResponsavelAlunos", fields: [responsavelId], references: [id])
-
-  usuario         Usuario? @relation("AlunoUsuario")
-  mensalidades    Mensalidade[]
-
-  @@index([tenantId])
+  // Relações
+  escolinha  Escolinha @relation(fields: [escolinhaId], references: [id])
+  escolinhaId String
+  filhos     AlunoFutebol[]
+  pagamentos Pagamento[]
+  user       User?     @relation(fields: [userId], references: [id])
+  userId     String?   @unique
 }
 ```
 
@@ -124,23 +178,23 @@ model Aluno {
 
 ## Perfis de Usuário
 
-| Role | `tenantId` | Acesso |
-|------|------------|--------|
-| `SUPER_ADMIN` | `null` | Todos os tenants |
-| `ADMIN` | tenant | Gestão da escolinha |
-| `TREINADOR` | tenant | Alunos, treinos |
-| `AUXILIAR` | tenant | Apoio |
-| `RESPONSÁVEL` | tenant | Portal do pai/mãe |
-| `ALUNO` | tenant | Portal do aluno ≥ 18 |
+| Role          | `tenantId` | Acesso               |
+| ------------- | ---------- | -------------------- |
+| `SUPER_ADMIN` | `null`     | Todos os tenants     |
+| `ADMIN`       | tenant     | Gestão da escolinha  |
+| `TREINADOR`   | tenant     | Alunos, treinos      |
+| `AUXILIAR`    | tenant     | Apoio                |
+| `RESPONSÁVEL` | tenant     | Portal do pai/mãe    |
+| `ALUNO`       | tenant     | Portal do aluno ≥ 18 |
 
 ---
 
 ## Rotas de Autenticação
 
-| Método | Rota | Descrição |
-|-------|------|-----------|
-| `POST` | `/auth/login` | Login com email/senha |
-| `GET`  | `/auth/me` | Dados do usuário logado |
+| Método  | Rota                    | Descrição                  |
+| ------- | ----------------------- | -------------------------- |
+| `POST`  | `/auth/login`           | Login com email/senha      |
+| `GET`   | `/auth/me`              | Dados do usuário logado    |
 | `PATCH` | `/auth/change-password` | Trocar senha (autenticado) |
 
 ---
@@ -150,13 +204,13 @@ Quem pode criar qual tipo de usuário?
 Quem está criandoPode criar estes tipos de usuário (role)ObservaçãoSuper AdminTodos: ADMIN, TREINADOR, AUXILIAR, RESPONSÁVEL, ALUNOGlobal (painel admin)ADMIN da escolaTREINADOR, AUXILIAR, RESPONSÁVEL, ALUNO (≥ 18 anos)Dentro do seu tenantTreinador / AuxiliarNENHUMSó visualizaResponsável (pai/mãe)NENHUMSó acessa portalAluno ≥ 18NENHUMSó acessa seu portal
 Fluxo normal de criação de usuários (o que acontece no dia a dia)
 
-
 SituaçãoQuem cria o usuário?
 Onde acontece?Cadastrar um novo treinadorADMIN da escolaPainel interno → FuncionáriosCadastrar um responsável (pai/mãe)ADMIN da escolaPainel interno → Alunos → ResponsávelAtivar conta para aluno ≥ 18 anosADMIN da escolaNo cadastro do aluno → “Criar conta”Criar um novo tenant + primeiro ADMINSuper AdminPainel global do Super Admin
 
 ## Rotas Principais
 
 ### Tenant
+
 ```bash
 GET    /api/tenants/admin/all        → Super Admin lista todos
 GET    /api/tenants/:slug            → Por slug
@@ -164,17 +218,20 @@ POST   /api/tenants                  → Criar tenant (Super Admin)
 ```
 
 ### Usuário
+
 ```bash
 POST   /usuarios                 → Criar (interno)
 ```
 
 ### Aluno
+
 ```bash
 GET    /api/alunos                   → Listar (tenant)
 POST   /api/alunos                   → Cadastrar com responsável
 ```
 
 ### Responsável
+
 ```bash
 GET    /api/responsaveis/meus-filhos → Portal
 GET    /api/responsaveis/boletos     → Boletos
@@ -186,6 +243,7 @@ GET    /api/responsaveis/boletos     → Boletos
 
 - **Header**: `Authorization: Bearer <token>`
 - **Payload**:
+
 ```json
 {
   "userId": "abc123",
@@ -200,22 +258,25 @@ GET    /api/responsaveis/boletos     → Boletos
 
 ## Middlewares
 
-| Middleware | Uso |
-|----------|-----|
-| `authenticate` | Verifica JWT |
-| `isSuperAdmin` | Apenas Super Admin |
-| `requireTenant` | Exige `tenantId` |
-| `isResponsavelDoAluno` | Verifica vínculo |
+| Middleware             | Uso                |
+| ---------------------- | ------------------ |
+| `authenticate`         | Verifica JWT       |
+| `isSuperAdmin`         | Apenas Super Admin |
+| `requireTenant`        | Exige `tenantId`   |
+| `isResponsavelDoAluno` | Verifica vínculo   |
 
 ---
 
 ## Seeds
- criar conta do super admin
+
+criar conta do super admin
+
 ```bash
 npx tsx src/seeds/super-admin.seed.ts
 ```
 
 Cria:
+
 ```
 Email: superadmin@escolinha.com
 Senha: admin2025
@@ -252,7 +313,7 @@ npx prisma studio
 # Gerar cliente Prisma
 npx prisma generate
 
-#puchar banco 
+#puchar banco
 npx prisma db push
 
 #deletar dados do banco
@@ -274,6 +335,7 @@ npx prisma db push --force-reset
 ## Testes de API (cURL)
 
 ### Login Super Admin
+
 ```bash
 curl -X POST http://localhost:4000/auth/login \
   -H "Content-Type: application/json" \
@@ -281,6 +343,7 @@ curl -X POST http://localhost:4000/auth/login \
 ```
 
 ### Listar todos os tenants
+
 ```bash
 curl http://localhost:4000/tenants/admin/all \
   -H "Authorization: Bearer <token>"
@@ -314,6 +377,317 @@ curl http://localhost:4000/tenants/admin/all \
 
 ---
 
+Documentação do Backend do Sistema FutElite
+Esta documentação descreve a estrutura do backend do sistema FutElite, construído com Node.js, Express.js para rotas API, Prisma como ORM para interação com o banco de dados (PostgreSQL via Supabase ou similar), e Supabase Auth para autenticação. O backend é responsável por fornecer APIs RESTful para as funcionalidades do frontend, com ênfase em segurança (JWT para auth, policies por role), validação (Zod), e integração com ferramentas como Stripe para pagamentos SaaS.
+O backend é organizado em módulos correspondentes ao frontend: SuperAdmin, dashboardUser (aluno, crossfit, responsável), e (dashboard) (admin, treinador). Cada módulo tem rotas específicas, com middleware para autenticação e autorização (ex: admin-only, treinador-only).
+Configurações Gerais do Backend
+
+Tecnologias: Node.js v20, Express.js, Prisma v5, Supabase (auth + DB), Zod (validação), JWT (auth), Stripe (pagamentos).
+Estrutura de Pastas:textsrc/
+├── prisma/ → Schema Prisma (models, migrations)
+├── routes/ → Rotas API (separadas por módulo)
+│ ├── superadmin.ts
+│ ├── dashboardUser.ts
+│ └── dashboard.ts
+├── controllers/ → Lógica de negócios (ex: createEscolinha)
+├── middlewares/ → Auth, role check, validação
+├── utils/ → Helpers (ex: supabaseClient, errorHandler)
+└── server.ts → Entrypoint (Express setup)
+Autenticação: Supabase Auth. Middleware authGuard verifica JWT, roleGuard verifica role.
+API Base URL: /api/v1
+Respostas Padrão: JSON com { data, error, message }. Status codes: 200 (OK), 201 (Created), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 500 (Server Error).
+Validação: Zod para body/params/query.
+Pagamentos: Stripe para SaaS e mensalidades.
+
+1. SuperAdmin (Gerenciamento Global)
+   Rota base: /api/v1/superadmin (somente superadmin role).
+
+Escolinhas:
+GET /escolinhas: Lista todas escolinhas.
+Params: ?status=ativa (filtro).
+Response: { data: [{ id, nome, status, totalAlunos }] }.
+Controller: getEscolinhas (Prisma query com count alunos).
+
+POST /escolinhas/nova: Cria nova escolinha.
+Body: { nome, endereco, adminEmail, planoSaaS } (Zod validated).
+Response: { data: { id, nome }, message: "Escolinha criada" }.
+Controller: createEscolinha (Prisma create, envia email boas-vindas).
+
+GET /escolinhas/[id]: Detalhes da escolinha.
+Params: id (string).
+Response: { data: { nome, totalAlunos, receita, funcionarios } }.
+Controller: getEscolinhaDetails (Prisma findUnique com relations).
+
+PUT /escolinhas/[id]/editar: Edita escolinha.
+Params: id (string).
+Body: { nome, endereco, planoSaaS } (partial).
+Response: { message: "Escolinha atualizada" }.
+Controller: updateEscolinha (Prisma update).
+
+Pagamentos SaaS:
+GET /pagamentos: Lista pagamentos de escolinhas.
+Params: ?mes=2025-12 (filtro).
+Response: { data: [{ escolinhaId, valor, status, data }] }.
+Controller: getPagamentosSaaS (Prisma query com join escolinhas).
+
+POST /pagamentos/lembrete: Envia lembrete inadimplente.
+Body: { escolinhaId }.
+Response: { message: "Lembrete enviado" }.
+Controller: sendLembrete (integra email service).
+
+Relatórios Globais:
+GET /relatorios: Gera relatório global.
+Params: ?ano=2025.
+Response: { data: { receitaTotal, escolinhasAtivas, crescimento } }.
+Controller: getRelatoriosGlobais (Prisma aggregate).
+
+Configurações SaaS:
+GET /configuracoes: Pega configs globais.
+Response: { data: { planosSaaS, taxas } }.
+Controller: getConfigsSaaS (Prisma findMany).
+
+PUT /configuracoes: Atualiza configs.
+Body: { planos, taxas }.
+Response: { message: "Configs atualizadas" }.
+Controller: updateConfigsSaaS (Prisma update).
+
+Suporte:
+GET /suporte/tickets: Lista tickets.
+Params: ?escolinhaId (filtro).
+Response: { data: [{ id, assunto, status, data }] }.
+Controller: getTickets (Prisma query).
+
+POST /suporte/responder: Responde ticket.
+Body: { ticketId, resposta }.
+Response: { message: "Resposta enviada" }.
+Controller: responderTicket (Prisma update, envia email).
+
+2. dashboardUser (APIs para Alunos, CrossFit, Responsáveis)
+   Rota base: /api/v1/user (auth necessária, role "aluno", "responsavel" ou "crossfit").
+
+Aluno:
+GET /aluno/dashboard: Resumo aluno.
+Response: { data: { progresso, frequência, próximasAulas } }.
+Controller: getAlunoDashboard (Prisma findUnique com relations).
+
+GET /aluno/treinos: Treinos do aluno.
+Params: ?semana=atual.
+Response: { data: [{ data, exercícios }] }.
+Controller: getTreinosAluno (Prisma query).
+
+GET /aluno/mensagens: Mensagens do aluno.
+Response: { data: [{ id, texto, de }] }.
+Controller: getMensagensAluno.
+
+POST /aluno/mensagens/enviar: Envia mensagem.
+Body: { texto, destinatarioId }.
+Response: { message: "Mensagem enviada" }.
+Controller: sendMensagemAluno.
+
+GET /aluno/progresso: Progresso do aluno.
+Response: { data: { notas, frequênciaMeses } }.
+Controller: getProgressoAluno.
+
+CrossFit:
+GET /crossfit/dashboard: Resumo CrossFit.
+Response: { data: { frequência, progresso, próximaAula } }.
+Controller: getCrossfitDashboard.
+
+GET /crossfit/pagamento: Pagamentos CrossFit.
+Response: { data: { histórico, próximoVencimento } }.
+Controller: getPagamentosCrossfit.
+
+GET /crossfit/mensagens: Mensagens CrossFit.
+Response: { data: [{ id, texto }] }.
+Controller: getMensagensCrossfit.
+
+GET /crossfit/progresso: Progresso CrossFit.
+Response: { data: { métricas, frequência } }.
+Controller: getProgressoCrossfit.
+
+Responsável:
+GET /responsavel/dashboard: Resumo responsável.
+Response: { data: { filhos, frequênciaFilhos, pagamentosPendentes } }.
+Controller: getResponsavelDashboard (Prisma query com relations filhos).
+
+GET /responsavel/pagamentos: Pagamentos por filho.
+Params: ?filhoId.
+Response: { data: { histórico } }.
+Controller: getPagamentosResponsavel.
+
+GET /responsavel/alunos: Detalhes filhos.
+Response: { data: [{ nome, progresso, frequência }] }.
+Controller: getFilhosResponsavel.
+
+GET /responsavel/mensagens: Mensagens por filho.
+Params: ?filhoId.
+Response: { data: [{ id, texto }] }.
+Controller: getMensagensResponsavel.
+
+3. (dashboard) (APIs para Admin e Treinadores)
+   Rota base: /api/v1/admin (auth + role check: admin ou treinador).
+
+Dashboard Admin:
+GET /dashboard: Resumo geral.
+Response: { data: { alunosTotal, receita, frequênciaMedia } }.
+Controller: getAdminDashboard (Prisma aggregate).
+
+Aluno:
+GET /aluno: Lista alunos.
+Params: ?categoria.
+Response: { data: [{ id, nome, categoria } ] }.
+Controller: getAlunos.
+
+POST /aluno/novo: Cria aluno.
+Body: { nome, idade, responsávelId, categoria }.
+Response: { data: { id } }.
+Controller: createAluno.
+
+GET /aluno/[id]: Detalhes aluno.
+Response: { data: { nome, histórico, avaliações } }.
+Controller: getAlunoDetails.
+
+PUT /aluno/[id]/editar: Edita aluno.
+Body: { nome, categoria }.
+Response: { message: "Atualizado" }.
+Controller: updateAluno.
+
+Responsável:
+GET /responsavel: Lista responsáveis.
+Response: { data: [{ id, nome, filhosTotal } ] }.
+Controller: getResponsaveis.
+
+POST /responsavel/novo: Cria responsável.
+Body: { nome, email, filhosIds }.
+Response: { data: { id } }.
+Controller: createResponsavel.
+
+GET /responsavel/[id]: Detalhes responsável.
+Response: { data: { nome, filhos, pagamentos } }.
+Controller: getResponsavelDetails.
+
+PUT /responsavel/[id]/editar: Edita responsável.
+Body: { nome, email }.
+Response: { message: "Atualizado" }.
+Controller: updateResponsavel.
+
+Treinador:
+GET /treinador/dashboard: Resumo treinador.
+Response: { data: { treinosHoje, alunosTotais, frequênciaMedia } }.
+Controller: getTreinadorDashboard (Prisma query por treinadorId).
+
+GET /treinador/meus-alunos: Lista alunos do treinador.
+Response: { data: [{ id, nome, categoria, mediaAvaliacao } ] }.
+Controller: getMeusAlunos (Prisma query com join treinador-alunos).
+
+POST /treinador/marca-presenca: Salva presença.
+Body: { treinoId, alunosPresentes: [ids] }.
+Response: { message: "Presença salva" }.
+Controller: salvarPresenca (Prisma update).
+
+GET /treinador/plano-treino: Plano do dia.
+Params: ?data=hoje.
+Response: { data: { exercícios, duracao } }.
+Controller: getPlanoTreino.
+
+GET /treinador/avaliar-aluno/[id]: Avaliação aluno.
+Response: { data: { categorias, histórico } }.
+Controller: getAvaliacaoAluno.
+
+POST /treinador/avaliar-aluno/[id]: Salva avaliação.
+Body: { notas, comentario }.
+Response: { message: "Avaliação salva" }.
+Controller: salvarAvaliacaoAluno.
+
+GET /treinador/aula-extra: Aulas extras agendadas.
+Response: { data: [{ id, aluno, tipo, status } ] }.
+Controller: getAulasExtrasTreinador.
+
+PUT /treinador/aula-extra/[id]: Marca realizada.
+Body: { status: "realizada" }.
+Response: { message: "Aula marcada" }.
+Controller: updateAulaExtra.
+
+GET /treinador/mensagens: Mensagens do treinador.
+Response: { data: [{ id, conversaId, texto } ] }.
+Controller: getMensagensTreinador.
+
+POST /treinador/mensagens/enviar: Envia mensagem.
+Body: { conversaId, texto }.
+Response: { message: "Enviada" }.
+Controller: sendMensagemTreinador.
+
+Financeiro:
+GET /financeiro/dashboard: Resumo financeiro.
+Response: { data: { receita, inadimplentes } }.
+Controller: getFinanceiroDashboard.
+
+GET /financeiro/relatorio: Relatório detalhado.
+Params: ?mes.
+Response: { data: { detalhes } }.
+Controller: getRelatorioFinanceiro.
+
+Funcionários:
+GET /funcionarios: Lista funcionários.
+Response: { data: [{ id, nome, role } ] }.
+Controller: getFuncionarios.
+
+POST /funcionarios/novo: Cria funcionário.
+Body: { nome, email, role }.
+Response: { data: { id } }.
+Controller: createFuncionario.
+
+GET /funcionarios/[id]: Detalhes funcionário.
+Response: { data: { nome, role, performance } }.
+Controller: getFuncionarioDetails.
+
+PUT /funcionarios/[id]/editar: Edita funcionário.
+Body: { nome, role }.
+Response: { message: "Atualizado" }.
+Controller: updateFuncionario.
+
+Esta documentação cobre as APIs principais baseadas no frontend. Em produção, adicione rate limiting, logging (Winston), testes (Jest) e deploy (Vercel). Se precisar de código fonte completo ou exemplos Prisma, avise!
+
 **EduPay - Transformando escolinhas em negócios profissionais**  
-*Desenvolvido com dedicação no Brasil*  
-*Atualizado em: 15 de novembro de 2025*
+_Desenvolvido com dedicação no Brasil_  
+_Atualizado em: 15 de novembro de 2025_
+
+```
+COMO FUNCIONA O UPLOAD DE IMAGENS (RECOMENDAÇÃO)
+Use Supabase Storage (ou Cloudinary) para armazenar as imagens:
+
+Frontend: Upload da foto → Supabase Storage → retorna URL pública
+Backend: Salva a URL no campo fotoUrl ou logoUrl
+Exibição: <img src={aluno.fotoUrl} /> no frontend
+
+Exemplos de Upload (Controller)
+TypeScript// Exemplo: Upload foto aluno
+export const uploadFotoAluno = async (req, res) => {
+  const { alunoId } = req.params;
+  const file = req.file; // multer ou similar
+
+  try {
+    // Upload no Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('fotos-alunos')
+      .upload(`aluno-${alunoId}.${file.mimetype.split('/')[1]}`, file.buffer, {
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    const fotoUrl = supabase.storage.from('fotos-alunos').getPublicUrl(data.path).data.publicUrl;
+
+    // Atualiza no banco
+    await prisma.alunoFutebol.update({
+      where: { id: alunoId },
+      data: { fotoUrl }
+    });
+
+    res.status(200).json({ data: { fotoUrl } });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao fazer upload" });
+  }
+};
+
+```

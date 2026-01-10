@@ -1,6 +1,6 @@
 // src/routes/superadmin.routes.ts
 import { Router } from 'express';
-import { atualizarPlano, buscarEscolinha, criarEscolinha, listarEscolinhas, suspenderPagamento } from '../controllers/superadmin.controller';
+import { atualizarPlano, buscarEscolinha, criarEscolinha, dashboard, listarEscolinhas, suspenderPagamento } from '../controllers/superadmin.controller';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -20,5 +20,8 @@ router.put('/escolinhas/:id/plano', authMiddleware, roleGuard('SUPERADMIN'), atu
 
 // Suspender Pagamento
 router.put('/escolinhas/:id/suspender', authMiddleware, roleGuard('SUPERADMIN'), suspenderPagamento);
+
+//CALCULAR RECEITA
+router.get('/dashboard', authMiddleware, roleGuard('SUPERADMIN'), dashboard);
 
 export default router;

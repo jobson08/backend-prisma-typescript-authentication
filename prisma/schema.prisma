@@ -57,6 +57,13 @@ model PlanoSaaS {
 }
 
 // ==================== PAGAMENTOS ====================
+enum PagamentoStatus {
+  PENDENTE
+  CONFIRMADO
+  ATRASADO
+  CANCELADO
+}
+
 model Pagamento {
   id          String    @id @default(uuid())
   escolinhaId String
@@ -66,19 +73,23 @@ model Pagamento {
   responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
 
   valor          Float
-  dataPagamento  DateTime @default(now())
-  metodo         String
+  dataVencimento DateTime? // ← ADICIONE: data prevista para pagamento
+  dataPagamento  DateTime?       @default(now()) // ← permite null se ainda não pago
+  metodo         String?
   tipo           String // "mensalidade_futebol", "mensalidade_crossfit", "aula_extra", "saas"
   referenciaId   String
-  status         String   @default("confirmado")
+  status         PagamentoStatus @default(PENDENTE) // ← use enum para consistência
   comprovanteUrl String?
 
-  createdAt            DateTime              @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   aulaExtras           AulaExtra[]
   mensalidadeCrossfits MensalidadeCrossfit[]
   mensalidadeFutebols  MensalidadeFutebol[]
 
-  @@index([escolinhaId, dataPagamento])
+  @@index([escolinhaId, dataVencimento])
+  @@index([escolinhaId, status])
   @@index([tipo])
 }
 
@@ -88,6 +99,11 @@ model Escolinha {
   nome     String
   endereco String?
   logoUrl  String?
+
+  // NOVOS CAMPOS ADICIONADOS
+  cidade      String? // Cidade (ex: "Cabo de Santo Agostinho")
+  estado      String? // Estado (ex: "PE", "SP", "RJ"...)
+  observacoes String? // Observações gerais (texto livre)
 
   // DOCUMENTO DA ESCOLINHA
   tipoDocumento   String? // "cpf" ou "cnpj"
@@ -135,6 +151,8 @@ model Escolinha {
   presencaCrossfits PresencaCrossfit[]
 
   avaliacaos Avaliacao[]
+
+  @@index([cidade, estado])
 }
 
 // ==================== FUNCIONÁRIO ====================

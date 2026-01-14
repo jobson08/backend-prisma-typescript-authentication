@@ -16,6 +16,9 @@ export class EscolinhaService {
           endereco: data.endereco,
           tipoDocumento: data.tipoDocumento,
           documento: data.documento,
+          //cidade: data.cidade,                // ← ADICIONE
+         // estado: data.estado,                // ← ADICIONE
+        //  observacoes: data.observacoes,      // ← ADICIONE
           nomeResponsavel: data.nomeResponsavel,
           emailContato: data.emailContato,
           telefone: data.telefone,
@@ -60,6 +63,9 @@ export class EscolinhaService {
         id: true,
         nome: true,
         endereco: true,
+        cidade: true,
+        estado:true,
+        observacoes:true,
         logoUrl: true,
         tipoDocumento: true,
         documento: true,
@@ -88,12 +94,16 @@ export class EscolinhaService {
   }
 
   async buscarPorId(id: string) {
+    console.log("[Service] Buscando escolinha ID:", id);
     const escolinha = await prisma.escolinha.findUnique({
       where: { id },
       select: {
         id: true,
         nome: true,
         endereco: true,
+        cidade: true,
+        estado:true,
+        observacoes:true,
         logoUrl: true,
         tipoDocumento: true,
         documento: true,
@@ -120,11 +130,27 @@ export class EscolinhaService {
     });
 
     if (!escolinha) {
+      console.log("[Service] Escolinha NÃO encontrada para ID:", id);
       throw new Error("Escolinha não encontrada");
     }
-
+    console.log("[Service] Escolinha encontrada:", escolinha.id);
     return escolinha;
   }
+
+  // atualizar escolina 
+  async atualizarEscolinha(id: string, data: Partial<any>) {
+  const escolinha = await prisma.escolinha.findUnique({ where: { id } });
+  if (!escolinha) {
+    throw new Error("Escolinha não encontrada");
+  }
+
+  const atualizada = await prisma.escolinha.update({
+    where: { id },
+    data,
+  });
+
+  return atualizada;
+}
 
   // Atualizar Plano SaaS
 async atualizarPlano(id: string, planoSaaS: string, valorPlanoMensal: number) {

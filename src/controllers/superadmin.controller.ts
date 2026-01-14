@@ -68,10 +68,12 @@ export const listarEscolinhas = async (req: Request, res: Response) => {
 
 // ======================== BUSCAR DETALHES DE UMA ESCOLINHA ========================
 export const buscarEscolinha = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  console.log("[Backend] Buscando escolinha com ID:", id);
 
+  try {
     const escolinha = await escolinhaService.buscarPorId(id);
+    console.log("[Backend] Escolinha encontrada:", escolinha);
 
     res.status(200).json({
       success: true,
@@ -98,16 +100,149 @@ export const buscarEscolinha = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
+    console.error("[Backend] Erro ao buscar escolinha ID:", id, error.message);
     if (error.message === "Escolinha não encontrada") {
       return res.status(404).json({ error: "Escolinha não encontrada" });
     }
-
-    console.error('Erro ao buscar escolinha:', error);
     res.status(500).json({ error: 'Erro interno ao buscar escolinha' });
   }
 };
 
-// ======================== BATUALIZAR PLANO DE UMA ESCOLINHA ========================
+// ======================== ATUALIZAR ESCOLINHA ========================
+export const atualizarEscolinha = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  console.log("[AtualizarEscolinha] Iniciando atualização - ID:", id);
+  console.log("[AtualizarEscolinha] Body recebido:", req.body);
+
+  try {
+    // 1. Validação básica obrigatória (campos essenciais)
+    if (!req.body.nome) {
+      return res.status(400).json({ 
+        success: false,
+        error: "O campo 'nome' é obrigatório" 
+      });
+    }
+
+    // 2. Campos permitidos para atualização (evita atualização de campos sensíveis)
+    const allowedFields = [
+      "nome",
+      "endereco",
+      "telefone",
+      "emailContato",
+      "nomeResponsavel",
+      "planoSaaS",
+      "valorPlanoMensal",
+      "statusPagamentoSaaS",
+      "dataProximoCobranca",
+      "aulasExtrasAtivas",
+      "crossfitAtivo",
+      "observacoes",          // se você adicionar no schema
+      // "logoUrl" - será tratado separadamente com upload
+    ];
+
+    // Filtra apenas os campos permitidos que vieram no body
+    const updateData: any = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    // 3. Validação extra para campos específicos (opcional, mas recomendado)
+    if (updateData.planoSaaS && !["basico", "pro", "enterprise"].includes(updateData.planoSaaS)) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Plano SaaS inválido. Valores permitidos: basico, pro, enterprise" 
+      });
+    }
+
+    if (updateData.valorPlanoMensal !== undefined && typeof updateData.valorPlanoMensal !== "number") {
+      return res.status(400).json({ 
+        success: false,
+        error: "valorPlanoMensal deve ser um número" 
+      });
+    }
+
+    // 4. Atualiza no banco via service
+    const atualizada = await escolinhaService.atualizarEscolinha(id, updateData);
+
+    console.log("[AtualizarEscolinha] Escolinha atualizada com sucesso:", atualizada.id);
+
+    // 5. Resposta de sucesso
+    res.status(200).json({
+      success: true,
+      message: "Escolinha atualizada com sucesso!",
+      data: {
+        id: atualizada.id,
+        nome: atualizada.nome,
+        endereco: atualizada.endereco,
+        telefone: atualizada.telefone,
+        emailContato: atualizada.emailContato,
+        nomeResponsavel: atualizada.nomeResponsavel,
+        planoSaaS: atualizada.planoSaaS,
+        valorPlanoMensal: atualizada.valorPlanoMensal,
+        statusPagamentoSaaS: atualizada.statusPagamentoSaaS,
+        dataProximoCobranca: atualizada.dataProximoCobranca,
+        aulasExtrasAtivas: atualizada.aulasExtrasAtivas,
+        crossfitAtivo: atualizada.crossfitAtivo,
+        updatedAt: atualizada.updatedAt,
+      },
+    });
+  } catch (error: any) {
+    console.error("[AtualizarEscolinha] Erro completo:", error);
+
+    if (error.message?.includes("não encontrada") || error.code === "P2025") {
+      return res.status(404).json({ 
+        success: false,
+        error: "Escolinha não encontrada" 
+      });
+    }
+
+    // Erro genérico
+    res.status(500).json({ 
+      success: false,
+      error: "Erro interno ao atualizar escolinha",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
+};
+
+//=========================LISTAR PAGAMENTO=========================================
+export const listarPagamentos = async (req: Request, res: Response) => {
+  try {
+    const pagamentos = await prisma.pagamento.findMany({
+      include: {
+        escolinha: {
+          select: { nome: true, planoSaaS: true },
+        },
+      },
+      orderBy: { dataPagamento: 'desc' },
+    });
+
+    const formatted = pagamentos.map(p => ({
+      id: p.id,
+      escolinha: p.escolinha.nome,
+      plano: p.escolinha.planoSaaS,
+      valor: p.valor,
+      dataPagamento: p.dataPagamento?.toISOString() || null,
+      dataVencimento: p.dataVencimento?.toISOString() || null,
+      status: p.status,
+      metodo: p.metodo || "Não informado",
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formatted.length,
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error("[ListarPagamentos] Erro:", error);
+    res.status(500).json({ error: "Erro ao listar pagamentos" });
+  }
+};
+
+// ======================== ATUALIZAR PLANO DE UMA ESCOLINHA ========================
 
 export const atualizarPlano = async (req: Request, res: Response) => {
   try {

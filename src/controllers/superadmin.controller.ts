@@ -4,6 +4,7 @@ import { createEscolinhaSchema } from '../dto/create-escolinha.dto';
 import { EscolinhaService } from '../services/escolinha.service';
 import { z } from 'zod';
 import { prisma } from '../config/database';
+import { Prisma } from '../../generated/prisma';
 
 const escolinhaService = new EscolinhaService();
 
@@ -12,7 +13,22 @@ export const criarEscolinha = async (req: Request, res: Response) => {
   try {
     const data = createEscolinhaSchema.parse(req.body);
 
-    const escolinha = await escolinhaService.criarEscolinha(data);
+    console.log("[CriarEscolinha] Dados recebidos:", data);
+
+    const agora = new Date();
+    const dataInicioPlano = data.dataInicioPlano ? new Date(data.dataInicioPlano) : agora;
+    const dataProximoCobranca = new Date(dataInicioPlano);
+    dataProximoCobranca.setDate(dataProximoCobranca.getDate() + 30);
+
+    const escolinha = await escolinhaService.criarEscolinha({
+      ...data,
+      dataInicioPlano,
+      dataProximoCobranca,
+      statusPagamentoSaaS: data.statusPagamentoSaaS || "ativo",
+      cidade: data.cidade,
+      estado: data.estado,
+      observacoes: data.observacoes,
+    });
 
     res.status(201).json({
       success: true,
@@ -20,9 +36,13 @@ export const criarEscolinha = async (req: Request, res: Response) => {
       data: {
         id: escolinha.id,
         nome: escolinha.nome,
-        emailContato: escolinha.emailContato,
-        planoSaaS: escolinha.planoSaaS,
-        adminEmail: data.adminEmail,
+        cidade: escolinha.cidade,
+        estado: escolinha.estado,
+        observacoes: escolinha.observacoes,
+        // ... outros campos
+        dataInicioPlano: escolinha.dataInicioPlano?.toISOString(),
+        dataProximoCobranca: escolinha.dataProximoCobranca?.toISOString(),
+        statusPagamentoSaaS: escolinha.statusPagamentoSaaS,
       },
     });
   } catch (error: any) {
@@ -36,7 +56,7 @@ export const criarEscolinha = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Erro ao criar escolinha:', error);
+    console.error('[CriarEscolinha] Erro completo:', error);
     res.status(500).json({ error: 'Erro interno ao criar escolinha' });
   }
 };
@@ -52,10 +72,14 @@ export const listarEscolinhas = async (req: Request, res: Response) => {
       data: escolinhas.map(e => ({
         id: e.id,
         nome: e.nome,
+        cidade: e.cidade || "Não informado",
+        estado: e.estado || "Não informado",
         planoSaaS: e.planoSaaS,
         valorPlanoMensal: e.valorPlanoMensal,
         statusPagamentoSaaS: e.statusPagamentoSaaS,
-        createdAt: e.createdAt,
+        dataInicioPlano: e.dataInicioPlano?.toISOString(),
+        dataProximoCobranca: e.dataProximoCobranca?.toISOString(),
+        createdAt: e.createdAt.toISOString(),
         logoUrl: e.logoUrl,
         totalAlunos: e._count.alunosFutebol + e._count.alunosCrossfit,
       })),
@@ -69,11 +93,10 @@ export const listarEscolinhas = async (req: Request, res: Response) => {
 // ======================== BUSCAR DETALHES DE UMA ESCOLINHA ========================
 export const buscarEscolinha = async (req: Request, res: Response) => {
   const { id } = req.params;
-  console.log("[Backend] Buscando escolinha com ID:", id);
+  console.log("[Backend] Buscando escolinha ID:", id);
 
   try {
     const escolinha = await escolinhaService.buscarPorId(id);
-    console.log("[Backend] Escolinha encontrada:", escolinha);
 
     res.status(200).json({
       success: true,
@@ -81,6 +104,9 @@ export const buscarEscolinha = async (req: Request, res: Response) => {
         id: escolinha.id,
         nome: escolinha.nome,
         endereco: escolinha.endereco,
+        cidade: escolinha.cidade,
+        estado: escolinha.estado,
+        observacoes: escolinha.observacoes,
         logoUrl: escolinha.logoUrl,
         tipoDocumento: escolinha.tipoDocumento,
         documento: escolinha.documento,
@@ -90,17 +116,17 @@ export const buscarEscolinha = async (req: Request, res: Response) => {
         planoSaaS: escolinha.planoSaaS,
         valorPlanoMensal: escolinha.valorPlanoMensal,
         statusPagamentoSaaS: escolinha.statusPagamentoSaaS,
-        dataInicioPlano: escolinha.dataInicioPlano,
-        dataProximoCobranca: escolinha.dataProximoCobranca,
+        dataInicioPlano: escolinha.dataInicioPlano?.toISOString(),
+        dataProximoCobranca: escolinha.dataProximoCobranca?.toISOString(),
         aulasExtrasAtivas: escolinha.aulasExtrasAtivas,
         crossfitAtivo: escolinha.crossfitAtivo,
-        createdAt: escolinha.createdAt,
-        updatedAt: escolinha.updatedAt,
-        totalAlunos: escolinha._count.alunosFutebol + escolinha._count.alunosCrossfit,
+        createdAt: escolinha.createdAt?.toISOString(),
+        updatedAt: escolinha.updatedAt?.toISOString(),
+        totalAlunos: (escolinha._count?.alunosFutebol || 0) + (escolinha._count?.alunosCrossfit || 0),
       },
     });
   } catch (error: any) {
-    console.error("[Backend] Erro ao buscar escolinha ID:", id, error.message);
+    console.error("[Backend] Erro ao buscar:", error);
     if (error.message === "Escolinha não encontrada") {
       return res.status(404).json({ error: "Escolinha não encontrada" });
     }
@@ -112,103 +138,53 @@ export const buscarEscolinha = async (req: Request, res: Response) => {
 export const atualizarEscolinha = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  console.log("[AtualizarEscolinha] Iniciando atualização - ID:", id);
-  console.log("[AtualizarEscolinha] Body recebido:", req.body);
+  console.log("[AtualizarEscolinha] ID:", id);
+  console.log("[AtualizarEscolinha] Body:", req.body);
 
   try {
-    // 1. Validação básica obrigatória (campos essenciais)
     if (!req.body.nome) {
-      return res.status(400).json({ 
-        success: false,
-        error: "O campo 'nome' é obrigatório" 
-      });
+      return res.status(400).json({ error: "Nome é obrigatório" });
     }
 
-    // 2. Campos permitidos para atualização (evita atualização de campos sensíveis)
-    const allowedFields = [
-      "nome",
-      "endereco",
-      "telefone",
-      "emailContato",
-      "nomeResponsavel",
-      "planoSaaS",
-      "valorPlanoMensal",
-      "statusPagamentoSaaS",
-      "dataProximoCobranca",
-      "aulasExtrasAtivas",
-      "crossfitAtivo",
-      "observacoes",          // se você adicionar no schema
-      // "logoUrl" - será tratado separadamente com upload
-    ];
+    const updateData: Prisma.EscolinhaUpdateInput = {
+      nome: req.body.nome,
+      endereco: req.body.endereco,
+      telefone: req.body.telefone,
+      emailContato: req.body.emailContato,
+      nomeResponsavel: req.body.nomeResponsavel,
+      planoSaaS: req.body.planoSaaS,
+      valorPlanoMensal: req.body.valorPlanoMensal,
+      statusPagamentoSaaS: req.body.statusPagamentoSaaS,
+      dataProximoCobranca: req.body.dataProximoCobranca ? new Date(req.body.dataProximoCobranca) : undefined,
+      aulasExtrasAtivas: req.body.aulasExtrasAtivas,
+      crossfitAtivo: req.body.crossfitAtivo,
+      cidade: req.body.cidade,
+      estado: req.body.estado,
+      observacoes: req.body.observacoes,
+    };
 
-    // Filtra apenas os campos permitidos que vieram no body
-    const updateData: any = {};
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updateData[field] = req.body[field];
-      }
+    // Validações extras
+    if (updateData.planoSaaS && !["basico", "pro", "enterprise"].includes(updateData.planoSaaS as string)) {
+      return res.status(400).json({ error: "Plano inválido" });
     }
 
-    // 3. Validação extra para campos específicos (opcional, mas recomendado)
-    if (updateData.planoSaaS && !["basico", "pro", "enterprise"].includes(updateData.planoSaaS)) {
-      return res.status(400).json({ 
-        success: false,
-        error: "Plano SaaS inválido. Valores permitidos: basico, pro, enterprise" 
-      });
-    }
-
-    if (updateData.valorPlanoMensal !== undefined && typeof updateData.valorPlanoMensal !== "number") {
-      return res.status(400).json({ 
-        success: false,
-        error: "valorPlanoMensal deve ser um número" 
-      });
-    }
-
-    // 4. Atualiza no banco via service
     const atualizada = await escolinhaService.atualizarEscolinha(id, updateData);
 
-    console.log("[AtualizarEscolinha] Escolinha atualizada com sucesso:", atualizada.id);
-
-    // 5. Resposta de sucesso
     res.status(200).json({
       success: true,
-      message: "Escolinha atualizada com sucesso!",
-      data: {
-        id: atualizada.id,
-        nome: atualizada.nome,
-        endereco: atualizada.endereco,
-        telefone: atualizada.telefone,
-        emailContato: atualizada.emailContato,
-        nomeResponsavel: atualizada.nomeResponsavel,
-        planoSaaS: atualizada.planoSaaS,
-        valorPlanoMensal: atualizada.valorPlanoMensal,
-        statusPagamentoSaaS: atualizada.statusPagamentoSaaS,
-        dataProximoCobranca: atualizada.dataProximoCobranca,
-        aulasExtrasAtivas: atualizada.aulasExtrasAtivas,
-        crossfitAtivo: atualizada.crossfitAtivo,
-        updatedAt: atualizada.updatedAt,
-      },
+      message: "Escolinha atualizada!",
+      data: atualizada,
     });
   } catch (error: any) {
-    console.error("[AtualizarEscolinha] Erro completo:", error);
-
-    if (error.message?.includes("não encontrada") || error.code === "P2025") {
-      return res.status(404).json({ 
-        success: false,
-        error: "Escolinha não encontrada" 
-      });
+    console.error("[AtualizarEscolinha] Erro:", error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: "Escolinha não encontrada" });
     }
-
-    // Erro genérico
-    res.status(500).json({ 
-      success: false,
-      error: "Erro interno ao atualizar escolinha",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Erro interno ao atualizar' });
   }
 };
 
-//=========================LISTAR PAGAMENTO=========================================
+// ======================== LISTAR PAGAMENTOS ========================
 export const listarPagamentos = async (req: Request, res: Response) => {
   try {
     const pagamentos = await prisma.pagamento.findMany({
@@ -226,7 +202,7 @@ export const listarPagamentos = async (req: Request, res: Response) => {
       plano: p.escolinha.planoSaaS,
       valor: p.valor,
       dataPagamento: p.dataPagamento?.toISOString() || null,
-      dataVencimento: p.dataVencimento?.toISOString() || null,
+      dataVencimento: p.dataVencimento?.toISOString() || null, // se existir no schema
       status: p.status,
       metodo: p.metodo || "Não informado",
     }));
@@ -242,66 +218,48 @@ export const listarPagamentos = async (req: Request, res: Response) => {
   }
 };
 
-// ======================== ATUALIZAR PLANO DE UMA ESCOLINHA ========================
-
+// ======================== ATUALIZAR PLANO ========================
 export const atualizarPlano = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { planoSaaS, valorPlanoMensal } = req.body;
+  const { id } = req.params;
+  const { planoSaaS, valorPlanoMensal } = req.body;
 
+  try {
     if (!planoSaaS || typeof valorPlanoMensal !== "number") {
-      return res.status(400).json({ error: "Plano SaaS e valor obrigatório" });
+      return res.status(400).json({ error: "Plano e valor obrigatórios" });
     }
 
     const atualizada = await escolinhaService.atualizarPlano(id, planoSaaS, valorPlanoMensal);
 
     res.status(200).json({
       success: true,
-      message: "Plano atualizado com sucesso!",
-      data: {
-        id: atualizada.id,
-        planoSaaS: atualizada.planoSaaS,
-        valorPlanoMensal: atualizada.valorPlanoMensal,
-        dataProximoCobranca: atualizada.dataProximoCobranca,
-      },
+      message: "Plano atualizado!",
+      data: atualizada,
     });
   } catch (error: any) {
-    if (error.message.includes("não encontrada")) {
-      return res.status(404).json({ error: "Escolinha não encontrada" });
-    }
-    console.error('Erro ao atualizar plano:', error);
-    res.status(500).json({ error: 'Erro interno ao atualizar plano' });
+    console.error("[AtualizarPlano] Erro:", error);
+    res.status(500).json({ error: 'Erro ao atualizar plano' });
   }
 };
 
-// ======================== SUSPENDER PAGAMENTO DE UMA ESCOLINHA ========================
-
+// ======================== SUSPENDER PAGAMENTO ========================
 export const suspenderPagamento = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const atualizada = await escolinhaService.suspenderPagamento(id);
 
     res.status(200).json({
       success: true,
-      message: "Pagamento suspenso com sucesso!",
-      data: {
-        id: atualizada.id,
-        statusPagamentoSaaS: atualizada.statusPagamentoSaaS,
-      },
+      message: "Pagamento suspenso!",
+      data: atualizada,
     });
   } catch (error: any) {
-    if (error.message.includes("não encontrada")) {
-      return res.status(404).json({ error: "Escolinha não encontrada" });
-    }
-    if (error.message.includes("já está suspenso")) {
-      return res.status(400).json({ error: "Pagamento já está suspenso" });
-    }
-    console.error('Erro ao suspender pagamento:', error);
-    res.status(500).json({ error: 'Erro interno ao suspender pagamento' });
+    console.error("[SuspenderPagamento] Erro:", error);
+    res.status(500).json({ error: 'Erro ao suspender pagamento' });
   }
 };
-// ======================== CALCULAR RECEITA DE UMA ESCOLINHA ========================
+
+// ======================== DASHBOARD ========================
 export const dashboard = async (req: Request, res: Response) => {
   try {
     const totalEscolinhas = await prisma.escolinha.count();
@@ -309,8 +267,6 @@ export const dashboard = async (req: Request, res: Response) => {
       where: { statusPagamentoSaaS: "ativo" },
     });
     const totalAlunos = await prisma.alunoFutebol.count() + await prisma.clienteCrossfit.count();
-
-    // ... calcule receitaMensal, etc com base em mensalidades e planos
 
     const atividadeRecente = await prisma.escolinha.findMany({
       take: 5,
@@ -327,11 +283,10 @@ export const dashboard = async (req: Request, res: Response) => {
         totalEscolinhas,
         escolinhasAtivas,
         totalAlunos,
-        receitaMensal: 185420, // calcule real
-        receitaAnual: 2225040,
+        receitaMensal: 185420, // TODO: calcular real
+        receitaAnual: 2225040, // TODO: calcular real
         crescimentoMensal: "+18.4%",
         ticketMedio: "R$ 271",
-        taxaConversaoTeste: "78%",
         ultimaAtualizacao: new Date().toLocaleString("pt-BR"),
         atividadeRecente: atividadeRecente.map(e => ({
           nome: e.nome,

@@ -6,6 +6,9 @@ export const createEscolinhaSchema = z.object({
   nome: z.string().min(3, "Nome da escolinha deve ter pelo menos 3 caracteres"),
   endereco: z.string().optional(),
   logoUrl: z.string().url("URL da logo inválida").optional().or(z.literal("")),
+  cidade: z.string().min(2, "Cidade obrigatória").optional(),
+  estado: z.string().min(2, "Estado obrigatório").optional(),
+  observacoes: z.string().optional(),
 
   // Documento da escolinha
   tipoDocumento: z.enum(["cpf", "cnpj"]).optional(),
@@ -35,6 +38,10 @@ export const createEscolinhaSchema = z.object({
   adminEmail: z.string().email("E-mail do admin obrigatório"),
   adminName: z.string().min(3, "Nome do admin obrigatório"),
   adminPassword: z.string().min(6, "Senha do admin deve ter no mínimo 6 caracteres"),
+
+  dataInicioPlano: z.string().datetime().optional(), // pode vir como string ISO do frontend
+  dataProximoCobranca: z.string().datetime().optional(),
+  statusPagamentoSaaS: z.enum(["ativo", "atrasado", "suspenso", "cancelado"]).optional(),
 });
 
 export type CreateEscolinhaDto = z.infer<typeof createEscolinhaSchema>;

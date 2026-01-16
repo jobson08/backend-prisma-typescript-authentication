@@ -1,47 +1,48 @@
 // src/services/escolinha.service.ts
 import { prisma } from '../config/database';
 import bcrypt from 'bcrypt';
-import { CreateEscolinhaDto } from '../dto/create-escolinha.dto';
 
+// O DTO antigo pode ser mantido para validação, mas o service usa tipos do Prisma
+import { CreateEscolinhaDto } from '../dto/create-escolinha.dto';
+import { Prisma } from '../../generated/prisma';
 
 export class EscolinhaService {
-  async criarEscolinha(data: CreateEscolinhaDto) {
+  // Aceita qualquer input compatível com Prisma (sem tipo rígido)
+  async criarEscolinha(data: any) {  // ou Prisma.EscolinhaCreateInput se quiser forçar
     const hashedPassword = await bcrypt.hash(data.adminPassword, 12);
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Cria a escolinha
+      const agora = new Date();
+
       const escolinha = await tx.escolinha.create({
         data: {
           nome: data.nome,
           endereco: data.endereco,
           tipoDocumento: data.tipoDocumento,
           documento: data.documento,
-          //cidade: data.cidade,                // ← ADICIONE
-         // estado: data.estado,                // ← ADICIONE
-        //  observacoes: data.observacoes,      // ← ADICIONE
+          cidade: data.cidade ?? null,
+          estado: data.estado ?? null,
+          observacoes: data.observacoes ?? null,
           nomeResponsavel: data.nomeResponsavel,
           emailContato: data.emailContato,
           telefone: data.telefone,
 
-          // Plano SaaS
           planoSaaS: data.planoSaaS,
           valorPlanoMensal: data.valorPlanoMensal,
-          dataInicioPlano: new Date(),
-          dataProximoCobranca: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+          dataInicioPlano: data.dataInicioPlano || agora,
+          dataProximoCobranca: data.dataProximoCobranca || new Date(agora.setMonth(agora.getMonth() + 1)),
+          statusPagamentoSaaS: data.statusPagamentoSaaS || "ativo",
 
-          // Valores dos alunos
           valorMensalidadeFutebol: data.valorMensalidadeFutebol,
           valorMensalidadeCrossfit: data.valorMensalidadeCrossfit,
           valorAulaExtraPadrao: data.valorAulaExtraPadrao,
           diaVencimento: data.diaVencimento,
 
-          // Módulos
           aulasExtrasAtivas: data.aulasExtrasAtivas || false,
           crossfitAtivo: data.crossfitAtivo || false,
         },
       });
 
-      // 2. Cria o ADMIN da escolinha
       await tx.user.create({
         data: {
           email: data.adminEmail,
@@ -57,6 +58,9 @@ export class EscolinhaService {
     });
   }
 
+  /**
+   * Lista todas as escolinhas com campos selecionados
+   */
   async listarTodas() {
     return await prisma.escolinha.findMany({
       select: {
@@ -64,8 +68,8 @@ export class EscolinhaService {
         nome: true,
         endereco: true,
         cidade: true,
-        estado:true,
-        observacoes:true,
+        estado: true,
+        observacoes: true,
         logoUrl: true,
         tipoDocumento: true,
         documento: true,
@@ -81,7 +85,7 @@ export class EscolinhaService {
         crossfitAtivo: true,
         createdAt: true,
         updatedAt: true,
-        // Contagem de alunos (para exibir total)
+        // Contagem de alunos
         _count: {
           select: {
             alunosFutebol: true,
@@ -93,8 +97,12 @@ export class EscolinhaService {
     });
   }
 
+  /**
+   * Busca uma escolinha por ID com campos completos
+   */
   async buscarPorId(id: string) {
     console.log("[Service] Buscando escolinha ID:", id);
+
     const escolinha = await prisma.escolinha.findUnique({
       where: { id },
       select: {
@@ -102,8 +110,8 @@ export class EscolinhaService {
         nome: true,
         endereco: true,
         cidade: true,
-        estado:true,
-        observacoes:true,
+        estado: true,
+        observacoes: true,
         logoUrl: true,
         tipoDocumento: true,
         documento: true,
@@ -123,7 +131,7 @@ export class EscolinhaService {
           select: {
             alunosFutebol: true,
             alunosCrossfit: true,
-            users: true, // admins/treinadores
+            users: true,
           },
         },
       },
@@ -133,80 +141,83 @@ export class EscolinhaService {
       console.log("[Service] Escolinha NÃO encontrada para ID:", id);
       throw new Error("Escolinha não encontrada");
     }
+
     console.log("[Service] Escolinha encontrada:", escolinha.id);
     return escolinha;
   }
 
-  // atualizar escolina 
-  async atualizarEscolinha(id: string, data: Partial<any>) {
-  const escolinha = await prisma.escolinha.findUnique({ where: { id } });
-  if (!escolinha) {
-    throw new Error("Escolinha não encontrada");
-  }
+  /**
+   * Atualiza uma escolinha (campos parciais)
+   */
+  async atualizarEscolinha(id: string, data: Prisma.EscolinhaUpdateInput) {
+    const escolinha = await prisma.escolinha.findUnique({ where: { id } });
+    if (!escolinha) {
+      throw new Error("Escolinha não encontrada");
+    }
 
-  const atualizada = await prisma.escolinha.update({
-    where: { id },
-    data,
-  });
-
-  return atualizada;
-}
-
-  // Atualizar Plano SaaS
-async atualizarPlano(id: string, planoSaaS: string, valorPlanoMensal: number) {
-  const planoValido = ["basico", "pro", "enterprise"].includes(planoSaaS);
-  if (!planoValido) {
-    throw new Error("Plano SaaS inválido");
-  }
-
-  return await prisma.$transaction(async (tx) => {
-    const escolinha = await tx.escolinha.findUnique({
+    return await prisma.escolinha.update({
       where: { id },
-      select: { planoSaaS: true },
+      data,
+    });
+  }
+
+  /**
+   * Atualiza apenas o plano SaaS e reinicia cobrança
+   */
+  async atualizarPlano(id: string, planoSaaS: string, valorPlanoMensal: number) {
+    const planoValido = ["basico", "pro", "enterprise"].includes(planoSaaS);
+    if (!planoValido) {
+      throw new Error("Plano SaaS inválido");
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const escolinha = await tx.escolinha.findUnique({
+        where: { id },
+        select: { planoSaaS: true },
+      });
+
+      if (!escolinha) {
+        throw new Error("Escolinha não encontrada");
+      }
+
+      const atualizada = await tx.escolinha.update({
+        where: { id },
+        data: {
+          planoSaaS,
+          valorPlanoMensal,
+          dataProximoCobranca: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        },
+      });
+
+      console.log(`Plano atualizado para ${planoSaaS} - R$${valorPlanoMensal} - Escolinha: ${id}`);
+      return atualizada;
+    });
+  }
+
+  /**
+   * Suspende pagamento SaaS
+   */
+  async suspenderPagamento(id: string) {
+    const escolinha = await prisma.escolinha.findUnique({
+      where: { id },
+      select: { statusPagamentoSaaS: true },
     });
 
     if (!escolinha) {
       throw new Error("Escolinha não encontrada");
     }
 
-    const atualizada = await tx.escolinha.update({
+    if (escolinha.statusPagamentoSaaS === "suspenso") {
+      throw new Error("Pagamento já está suspenso");
+    }
+
+    return await prisma.escolinha.update({
       where: { id },
       data: {
-        planoSaaS,
-        valorPlanoMensal,
-        dataProximoCobranca: new Date(new Date().setMonth(new Date().getMonth() + 1)), // reinicia cobrança
+        statusPagamentoSaaS: "suspenso",
       },
     });
-
-    // Log de mudança de plano (opcional, pode salvar em tabela de logs)
-    console.log(`Plano atualizado para ${planoSaaS} - R$${valorPlanoMensal} - Escolinha: ${id}`);
-
-    return atualizada;
-  });
-}
-
-// Suspender Pagamento
-async suspenderPagamento(id: string) {
-  const escolinha = await prisma.escolinha.findUnique({
-    where: { id },
-    select: { statusPagamentoSaaS: true },
-  });
-
-  if (!escolinha) {
-    throw new Error("Escolinha não encontrada");
   }
 
-  if (escolinha.statusPagamentoSaaS === "suspenso") {
-    throw new Error("Pagamento já está suspenso");
-  }
-
-  return await prisma.escolinha.update({
-    where: { id },
-    data: {
-      statusPagamentoSaaS: "suspenso",
-    },
-  });
-}
-
-  // Futuras funções: listarEscolinhas, atualizarPlano, suspenderPagamento, etc
+  // Futuras funções podem ser adicionadas aqui
 }

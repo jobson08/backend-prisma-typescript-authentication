@@ -23,14 +23,14 @@ export interface AuthUser {
   email: string;
   name: string | null;
   role: UserRole;
-  tenantId: string | null; // mantemos como tenantId no frontend (nome lógico)
+  tenantId: string | null; // você já tem como alias
+  escolinhaId: string | null; // ← ADICIONE AQUI (campo direto)
   escolinha?: {
     id: string;
     nome: string;
     logoUrl: string | null;
   } | null;
 }
-
 declare global {
   namespace Express {
     interface Request {
@@ -75,20 +75,21 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     }
 
     // Monta req.user (tenantId continua sendo o nome lógico)
-    req.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as UserRole,
-      tenantId: user.escolinhaId, // ← mapeia escolinhaId → tenantId
-      escolinha: user.escolinha
-        ? {
-            id: user.escolinha.id,
-            nome: user.escolinha.nome,
-            logoUrl: user.escolinha.logoUrl,
-          }
-        : null,
-    };
+  req.user = {
+  id: user.id,
+  email: user.email,
+  name: user.name,
+  role: user.role as UserRole,
+  tenantId: user.escolinhaId, // já está bom como alias
+  escolinhaId: user.escolinhaId, // ← ADICIONE AQUI (campo direto)
+  escolinha: user.escolinha
+    ? {
+        id: user.escolinha.id,
+        nome: user.escolinha.nome,
+        logoUrl: user.escolinha.logoUrl,
+      }
+    : null,
+};
 
     next();
   } catch (error) {

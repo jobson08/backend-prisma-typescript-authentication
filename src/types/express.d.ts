@@ -1,6 +1,6 @@
 // src/types/express.d.ts
 import { Role } from '@prisma/client'; // se você tiver o enum Role no Prisma
-
+import { Request } from 'express';
 // Tipo completo do usuário autenticado no req.user
 export interface AuthUser {
   id: string;
@@ -25,5 +25,11 @@ declare global {
       /** ID da escolinha (conveniência, preenchido em middlewares se necessário) */
       tenantId?: string;
     }
+  }
+}
+
+declare module 'express' {
+  interface Request {
+    escolinhaId?: string; // opcional, caso o middleware não injete
   }
 }

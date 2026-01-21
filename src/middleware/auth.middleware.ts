@@ -98,7 +98,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-export const roleGuard = (...allowedRoles: UserRole[]) => {
+export const roleGuard = (roles: UserRole | UserRole[], ...moreRoles: UserRole[]) => {
+  const allowedRoles = Array.isArray(roles) ? roles : [roles, ...moreRoles];
+
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Não autenticado' });

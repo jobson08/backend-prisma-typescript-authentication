@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { DashboardTenantService } from '../services/dashboard-tenant.service';
+import { DashboardTenantService } from '../../services/tenant/dashboard-tenant.service';
+
 
 const service = new DashboardTenantService();
 

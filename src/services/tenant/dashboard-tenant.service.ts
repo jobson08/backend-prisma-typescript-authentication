@@ -1,5 +1,5 @@
 // src/services/dashboard-tenant.service.ts
-import { prisma } from '../config/database';
+import { prisma } from '../../config/database';
 
 export class DashboardTenantService {
   async getDashboard(escolinhaId: string, mes?: string) {

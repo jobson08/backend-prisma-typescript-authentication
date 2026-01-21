@@ -23,19 +23,32 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
-  password  String // ← ADICIONE ESTE CAMPO!
+  password  String
   role      Role
   img       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
-  escolinha     Escolinha?       @relation(fields: [escolinhaId], references: [id])
-  escolinhaId   String?
-  alunoFutebol  AlunoFutebol?
-  alunoCrossfit ClienteCrossfit?
-  responsavel   Responsavel?
-  funcionario   Funcionario?
+  // Relações 1:1 opcionais (declaramos TODAS aqui no User com fields/references)
+  // Isso é o padrão correto: FK + @relation no lado "N" ou no lado que faz sentido ser dono
+
+  escolinhaId String?    @unique
+  escolinha   Escolinha? @relation(fields: [escolinhaId], references: [id])
+
+  funcionarioId String?      @unique
+  funcionario   Funcionario? @relation(fields: [funcionarioId], references: [id])
+
+  alunoFutebolId String?       @unique
+  alunoFutebol   AlunoFutebol? @relation(fields: [alunoFutebolId], references: [id])
+
+  alunoCrossfitId String?          @unique
+  alunoCrossfit   ClienteCrossfit? @relation(fields: [alunoCrossfitId], references: [id])
+
+  responsavelId String?      @unique
+  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+
+  @@index([email])
+  @@index([role])
 }
 
 // ==================== PLANOS SAAS ====================
@@ -95,37 +108,31 @@ model Pagamento {
 
 // ==================== ESCOLINHA ====================
 model Escolinha {
-  id       String  @id @default(uuid())
-  nome     String
-  endereco String?
-  logoUrl  String?
+  id          String  @id @default(uuid())
+  nome        String
+  endereco    String?
+  logoUrl     String?
+  cidade      String?
+  estado      String?
+  observacoes String?
 
-  // NOVOS CAMPOS ADICIONADOS
-  cidade      String? // Cidade (ex: "Cabo de Santo Agostinho")
-  estado      String? // Estado (ex: "PE", "SP", "RJ"...)
-  observacoes String? // Observações gerais (texto livre)
-
-  // DOCUMENTO DA ESCOLINHA
-  tipoDocumento   String? // "cpf" ou "cnpj"
+  tipoDocumento   String?
   documento       String? @unique
   nomeResponsavel String?
   emailContato    String?
   telefone        String?
 
-  // PLANO SAAS (o que a escolinha paga ao FutElite — configurável no painel dela)
-  planoSaaS           String // "basico", "pro", "enterprise" — escolhido pela escolinha
-  valorPlanoMensal    Float // valor atual do plano (ex: 150.00, 300.00, 500.00)
+  planoSaaS           String
+  valorPlanoMensal    Float
   dataInicioPlano     DateTime?
   dataProximoCobranca DateTime?
-  statusPagamentoSaaS String    @default("ativo") // ativo, atrasado, suspenso, cancelado
+  statusPagamentoSaaS String    @default("ativo")
 
-  // VALORES QUE A ESCOLINHA COBRA DOS ALUNOS (CONFIGURÁVEIS NO PAINEL DA ESCOLINHA)
-  valorMensalidadeFutebol  Float // OBRIGATÓRIO — admin define no painel
-  valorMensalidadeCrossfit Float? // OPCIONAL — só se crossfitAtivo = true
-  valorAulaExtraPadrao     Float? // OPCIONAL — valor base para aulas extras
-  diaVencimento            Int // Dia do mês que vence (1 a 31)
+  valorMensalidadeFutebol  Float
+  valorMensalidadeCrossfit Float?
+  valorAulaExtraPadrao     Float?
+  diaVencimento            Int
 
-  // MÓDULOS
   aulasExtrasAtivas Boolean @default(false)
   crossfitAtivo     Boolean @default(false)
 
@@ -133,7 +140,7 @@ model Escolinha {
   updatedAt DateTime @updatedAt
 
   // Relações
-  users                User[]
+  users                User[] // 1:N (admins da escolinha)
   alunosFutebol        AlunoFutebol[]
   alunosCrossfit       ClienteCrossfit[]
   funcionarios         Funcionario[]
@@ -143,41 +150,38 @@ model Escolinha {
   mensalidadesFutebol  MensalidadeFutebol[]
   mensalidadesCrossfit MensalidadeCrossfit[]
   pagamentos           Pagamento[]
-
-  planoSaaSs PlanoSaaS[]
-
-  presencas Presenca[]
-
-  presencaCrossfits PresencaCrossfit[]
-
-  avaliacaos Avaliacao[]
+  planoSaaSs           PlanoSaaS[]
+  presencas            Presenca[]
+  presencaCrossfits    PresencaCrossfit[]
+  avaliacaos           Avaliacao[]
 
   @@index([cidade, estado])
 }
 
 // ==================== FUNCIONÁRIO ====================
 model Funcionario {
-  id       String  @id @default(uuid())
-  nome     String
-  cargo    String // "treinador", "admin", "secretaria", etc
-  salario  Float?
-  fotoUrl  String?
-  telefone String?
-  email    String? @unique
+  id          String  @id @default(uuid())
+  nome        String
+  cargo       String
+  salario     Float?
+  fotoUrl     String?
+  telefone    String?
+  email       String? @unique
+  observacoes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
   escolinhaId String
 
-  user   User?   @relation(fields: [userId], references: [id])
-  userId String? @unique
+  userId String? @unique // ← FK simples + @unique (sem @relation aqui!)
+  // NÃO coloque user User? @relation(...) aqui — Prisma infere automaticamente
 
   treinos     Treino[]
   avaliacoes  Avaliacao[]
   aulasExtras AulaExtra[]
+  user        User?
 }
 
 // ==================== ALUNO FUTEBOL ====================
@@ -199,10 +203,12 @@ model AlunoFutebol {
   avaliacoes    Avaliacao[]
   presencas     Presenca[]
   mensalidades  MensalidadeFutebol[]
-  user          User?                @relation(fields: [userId], references: [id])
-  userId        String?              @unique
+  aulaExtras    AulaExtra[]
 
-  aulaExtras AulaExtra[]
+  userId String? @unique // ← FK simples + @unique
+  // NÃO coloque user User? @relation(...) aqui
+
+  user User?
 }
 
 // ==================== ALUNO CROSSFIT ====================
@@ -219,8 +225,10 @@ model ClienteCrossfit {
   escolinhaId  String
   presencas    PresencaCrossfit[]
   mensalidades MensalidadeCrossfit[]
-  user         User?                 @relation(fields: [userId], references: [id])
-  userId       String?               @unique
+
+  userId String? @unique // ← FK simples + @unique
+  // NÃO coloque user User? @relation(...) aqui
+  user   User?
 }
 
 // ==================== RESPONSÁVEL ====================
@@ -237,8 +245,10 @@ model Responsavel {
   escolinhaId String
   filhos      AlunoFutebol[]
   pagamentos  Pagamento[]
-  user        User?          @relation(fields: [userId], references: [id])
-  userId      String?        @unique
+
+  userId String? @unique // ← FK simples + @unique
+  // NÃO coloque user User? @relation(...) aqui
+  user   User?
 }
 
 // ==================== FINANCEIRO ====================

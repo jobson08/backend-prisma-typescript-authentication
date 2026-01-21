@@ -13,7 +13,15 @@ export const criarEscolinha = async (req: Request, res: Response) => {
   try {
     const data = createEscolinhaSchema.parse(req.body);
 
-    console.log("[CriarEscolinha] Dados recebidos:", data);
+    // Normaliza emails para minúsculo (defesa contra maiúsculas/minúsculas misturadas)
+    if (data.emailContato) {
+      data.emailContato = data.emailContato.toLowerCase().trim();
+    }
+    if (data.adminEmail) {
+      data.adminEmail = data.adminEmail.toLowerCase().trim();
+    }
+
+    console.log("[CriarEscolinha] Dados recebidos (emails normalizados):", data);
 
     const agora = new Date();
     const dataInicioPlano = data.dataInicioPlano ? new Date(data.dataInicioPlano) : agora;

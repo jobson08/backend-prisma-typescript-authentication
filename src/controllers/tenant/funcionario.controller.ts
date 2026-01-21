@@ -2,24 +2,56 @@ import { Request, Response } from 'express';
 import { FuncionarioService } from '../../services/funcionario.service';
 import { createFuncionarioSchema, updateFuncionarioSchema } from '../../dto/tenant/funcionario.dto';
 import { z } from 'zod';
+import { prisma } from '../../server';
+import bcrypt from 'bcrypt';
 
 const service = new FuncionarioService();
 //======================================criar funcionario=================================
 export const createFuncionario = async (req: Request, res: Response) => {
   try {
-    const escolinhaId = req.escolinhaId; // vindo do tenantGuard
-
-    if (!escolinhaId) {
-      return res.status(403).json({ error: 'Escolinha não identificada' });
-    }
-
+    const escolinhaId = req.escolinhaId!;
     const data = createFuncionarioSchema.parse(req.body);
 
-    const funcionario = await service.create(escolinhaId, data);
+    // Normaliza o email para minúsculo (evita duplicidade)
+    data.email = data.email.toLowerCase();
+
+    // Verifica se já existe (agora com email minúsculo)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "E-mail já cadastrado" });
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email: data.email, // já está em minúsculo
+        password: hashedPassword,
+        name: data.nome,
+        role: 'FUNCIONARIO',
+        escolinhaId,
+      },
+    });
+
+    // Cria o Funcionário vinculado
+    const funcionario = await prisma.funcionario.create({
+      data: {
+        nome: data.nome,
+        cargo: data.cargo,
+        salario: data.salario,
+        telefone: data.telefone,
+        email: data.email,
+        observacoes: data.observacoes,
+        escolinhaId,
+        userId: user.id, // vincula o login
+      },
+    });
 
     res.status(201).json({
       success: true,
-      message: 'Funcionário criado com sucesso',
+      message: 'Funcionário e login criados com sucesso',
       data: funcionario,
     });
   } catch (error) {
@@ -29,7 +61,6 @@ export const createFuncionario = async (req: Request, res: Response) => {
         details: error.issues,
       });
     }
-
     console.error('[CreateFuncionario] Erro:', error);
     res.status(500).json({ error: 'Erro interno ao criar funcionário' });
   }

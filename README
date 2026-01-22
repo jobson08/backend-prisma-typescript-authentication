@@ -310,10 +310,16 @@ npx tsx src/seeds/super-admin.seed.ts
 #Prisma studio
 npx prisma studio
 
-# Gerar cliente Prisma
+# 1. Formata o schema (opcional, mas ajuda)
+npx prisma format
+
+# 2. Valida se está tudo ok
+npx prisma validate
+
+# 3. Gera o client Prisma atualizado
 npx prisma generate
 
-#puchar banco
+# 4. Aplica as mudanças no banco (cria/atualiza colunas)
 npx prisma db push
 
 #deletar dados do banco

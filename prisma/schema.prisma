@@ -189,7 +189,7 @@ model AlunoFutebol {
   id             String   @id @default(uuid())
   nome           String
   cpf            String?  @unique
-  idade          Int
+  dataNascimento DateTime
   categoria      String
   fotoUrl        String?
   observacoes    String?
@@ -199,6 +199,8 @@ model AlunoFutebol {
 
   escolinha     Escolinha            @relation(fields: [escolinhaId], references: [id])
   escolinhaId   String
+  // responsavel    Responsavel?         @relation(fields: [responsavelId], references: [id])
+  // responsavelId  String?              // ← AGORA OPCIONAL (pode ser null) caso querira que o responsavl não seija obrigatorio
   responsavel   Responsavel          @relation(fields: [responsavelId], references: [id])
   responsavelId String
   avaliacoes    Avaliacao[]
@@ -206,8 +208,7 @@ model AlunoFutebol {
   mensalidades  MensalidadeFutebol[]
   aulaExtras    AulaExtra[]
 
-  userId String? @unique // ← FK simples + @unique
-  // NÃO coloque user User? @relation(...) aqui
+  userId String? @unique
 
   user User?
 }

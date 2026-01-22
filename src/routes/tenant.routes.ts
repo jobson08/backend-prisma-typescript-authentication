@@ -6,6 +6,7 @@ import { getDashboardTenant } from '../controllers/tenant/dashboard-tenant.contr
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel } from '../controllers/tenant/responsavel.controller';
+import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno } from '../controllers/tenant/aluno-futebol.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -28,6 +29,13 @@ router.get('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), getResponsav
 router.post('/responsaveis', authMiddleware, roleGuard('ADMIN'), createResponsavel);
 router.put('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
+
+// Alunos (protegidos por ADMIN do tenant)
+router.post('/alunos', authMiddleware, roleGuard('ADMIN'), createAluno);
+router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
+router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
+router.get('/alunos/:id', authMiddleware, roleGuard('ADMIN'), getAlunoById);
+router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);
 
 // Aqui você pode adicionar mais rotas do tenant no futuro:
 // router.get('/alunos', getAlunosTenant);

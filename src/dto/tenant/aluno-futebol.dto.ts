@@ -1,26 +1,40 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-// Criação
-export const createAlunoSchema = z.object({
-  nome: z.string().min(3, 'Nome completo obrigatório'),
- // Obrigatório + mensagem customizada usando .refine()
-  dataNascimento: z.date().refine(
-    (date) => !isNaN(date.getTime()),
-    { message: "Data de nascimento é obrigatória e deve ser válida" }
+export const createAlunoFutebolSchema = z.object({
+  nome: z.string().min(3, "Nome completo é obrigatório"),
+
+  dataNascimento: z.string().refine(
+    (val) => {
+      // Aceita ISO ou dd/mm/yyyy
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(val) ||
+        /^\d{2}\/\d{2}\/\d{4}$/.test(val)
+      );
+    },
+    { message: "Data de nascimento inválida (use dd/mm/yyyy ou YYYY-MM-DD)" }
   ),
-  telefone: z.string().min(10, 'Telefone inválido').optional(),
-  cpf: z.string().optional(),
-  categoria: z.string().min(1, 'Categoria obrigatória'),
-  responsavelId: z.string().optional(),
-  status: z.enum(['ATIVO', 'INATIVO', 'TRANCADO']).default('ATIVO'),
+
+  telefone: z.string()
+    .min(10, "Telefone deve ter pelo menos 10 dígitos")
+    .optional(),
+
+  cpf: z.string()
+    .regex(/^\d{11}$/, "CPF deve ter exatamente 11 dígitos")
+    .optional(),
+
+  categoria: z.string().min(1, "Categoria é obrigatória"),
+
+  responsavelId: z.string() .nullable() .optional(),
+
+  email: z.string().email("E-mail inválido"),
+
+  // Status opcional no DTO (backend força "ativo")
+  status: z.enum(["ATIVO", "INATIVO", "TRANCADO"]).optional(),
+
   observacoes: z.string().optional(),
-  // Opcional: se criar login para o aluno
-  email: z.string().email('E-mail inválido').optional(),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional(),
 });
 
-// Atualização (todos opcionais)
-export const updateAlunoSchema = createAlunoSchema.partial();
+export const updateAlunoFutebolSchema = createAlunoFutebolSchema.partial();
 
-export type CreateAlunoDto = z.infer<typeof createAlunoSchema>;
-export type UpdateAlunoDto = z.infer<typeof updateAlunoSchema>;
+export type CreateAlunoFutebolDto = z.infer<typeof createAlunoFutebolSchema>;
+export type UpdateAlunoFutebolDto = z.infer<typeof updateAlunoFutebolSchema>;

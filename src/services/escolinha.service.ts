@@ -1,28 +1,26 @@
 // src/services/escolinha.service.ts
 import { prisma } from '../config/database';
 import bcrypt from 'bcrypt';
-
-// O DTO antigo pode ser mantido para validação, mas o service usa tipos do Prisma
 import { CreateEscolinhaDto } from '../dto/create-escolinha.dto';
-import { Prisma } from '../../generated/prisma';
+import { Prisma } from '@prisma/client';
 
 export class EscolinhaService {
-  // Aceita qualquer input compatível com Prisma (sem tipo rígido)
-  async criarEscolinha(data: any) {  // ou Prisma.EscolinhaCreateInput se quiser forçar
+  async criarEscolinha(data: CreateEscolinhaDto) {
     const hashedPassword = await bcrypt.hash(data.adminPassword, 12);
 
     return await prisma.$transaction(async (tx) => {
       const agora = new Date();
 
+      // Cria a escolinha
       const escolinha = await tx.escolinha.create({
         data: {
           nome: data.nome,
           endereco: data.endereco,
           tipoDocumento: data.tipoDocumento,
           documento: data.documento,
-          cidade: data.cidade ?? null,
-          estado: data.estado ?? null,
-          observacoes: data.observacoes ?? null,
+          cidade: data.cidade,           // Prisma trata undefined como null
+          estado: data.estado,
+          observacoes: data.observacoes,
           nomeResponsavel: data.nomeResponsavel,
           emailContato: data.emailContato,
           telefone: data.telefone,
@@ -43,6 +41,7 @@ export class EscolinhaService {
         },
       });
 
+      // Cria o admin vinculado
       await tx.user.create({
         data: {
           email: data.adminEmail,
@@ -58,9 +57,6 @@ export class EscolinhaService {
     });
   }
 
-  /**
-   * Lista todas as escolinhas com campos selecionados
-   */
   async listarTodas() {
     return await prisma.escolinha.findMany({
       select: {
@@ -85,11 +81,11 @@ export class EscolinhaService {
         crossfitAtivo: true,
         createdAt: true,
         updatedAt: true,
-        // Contagem de alunos
         _count: {
           select: {
             alunosFutebol: true,
             alunosCrossfit: true,
+            users: true,
           },
         },
       },
@@ -97,9 +93,6 @@ export class EscolinhaService {
     });
   }
 
-  /**
-   * Busca uma escolinha por ID com campos completos
-   */
   async buscarPorId(id: string) {
     console.log("[Service] Buscando escolinha ID:", id);
 
@@ -146,57 +139,47 @@ export class EscolinhaService {
     return escolinha;
   }
 
-  /**
-   * Atualiza uma escolinha (campos parciais)
-   */
-  async atualizarEscolinha(id: string, data: Prisma.EscolinhaUpdateInput) {
+  async atualizarEscolinha(id: string, data: any) {  // ← use any aqui (mais seguro e evita o erro)
+  const escolinha = await prisma.escolinha.findUnique({ where: { id } });
+  if (!escolinha) {
+    throw new Error("Escolinha não encontrada");
+  }
+
+  // Validação básica (opcional, mas recomendado)
+  if (data.planoSaaS && !["basico", "pro", "enterprise"].includes(data.planoSaaS)) {
+    throw new Error("Plano SaaS inválido");
+  }
+
+  return await prisma.escolinha.update({
+    where: { id },
+    data,
+  });
+}
+
+  async atualizarPlano(id: string, planoSaaS: string, valorPlanoMensal: number) {
+    const planosValidos = ["basico", "pro", "enterprise"];
+    if (!planosValidos.includes(planoSaaS)) {
+      throw new Error("Plano SaaS inválido");
+    }
+
     const escolinha = await prisma.escolinha.findUnique({ where: { id } });
     if (!escolinha) {
       throw new Error("Escolinha não encontrada");
     }
 
+    const novaDataProximoCobranca = new Date();
+    novaDataProximoCobranca.setMonth(novaDataProximoCobranca.getMonth() + 1);
+
     return await prisma.escolinha.update({
       where: { id },
-      data,
+      data: {
+        planoSaaS,
+        valorPlanoMensal,
+        dataProximoCobranca: novaDataProximoCobranca,
+      },
     });
   }
 
-  /**
-   * Atualiza apenas o plano SaaS e reinicia cobrança
-   */
-  async atualizarPlano(id: string, planoSaaS: string, valorPlanoMensal: number) {
-    const planoValido = ["basico", "pro", "enterprise"].includes(planoSaaS);
-    if (!planoValido) {
-      throw new Error("Plano SaaS inválido");
-    }
-
-    return await prisma.$transaction(async (tx) => {
-      const escolinha = await tx.escolinha.findUnique({
-        where: { id },
-        select: { planoSaaS: true },
-      });
-
-      if (!escolinha) {
-        throw new Error("Escolinha não encontrada");
-      }
-
-      const atualizada = await tx.escolinha.update({
-        where: { id },
-        data: {
-          planoSaaS,
-          valorPlanoMensal,
-          dataProximoCobranca: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-        },
-      });
-
-      console.log(`Plano atualizado para ${planoSaaS} - R$${valorPlanoMensal} - Escolinha: ${id}`);
-      return atualizada;
-    });
-  }
-
-  /**
-   * Suspende pagamento SaaS
-   */
   async suspenderPagamento(id: string) {
     const escolinha = await prisma.escolinha.findUnique({
       where: { id },
@@ -218,6 +201,4 @@ export class EscolinhaService {
       },
     });
   }
-
-  // Futuras funções podem ser adicionadas aqui
 }

@@ -192,17 +192,18 @@ model AlunoFutebol {
   dataNascimento DateTime
   categoria      String
   fotoUrl        String?
+  email          String   @unique
+  telefone       String?
   observacoes    String?
+  status         String   @default("ativo")
   frequenciaMes  Int      @default(0)
   mediaAvaliacao Float    @default(0)
   createdAt      DateTime @default(now())
 
   escolinha     Escolinha            @relation(fields: [escolinhaId], references: [id])
   escolinhaId   String
-  // responsavel    Responsavel?         @relation(fields: [responsavelId], references: [id])
-  // responsavelId  String?              // ← AGORA OPCIONAL (pode ser null) caso querira que o responsavl não seija obrigatorio
-  responsavel   Responsavel          @relation(fields: [responsavelId], references: [id])
-  responsavelId String
+  responsavel   Responsavel?         @relation(fields: [responsavelId], references: [id])
+  responsavelId String?
   avaliacoes    Avaliacao[]
   presencas     Presenca[]
   mensalidades  MensalidadeFutebol[]

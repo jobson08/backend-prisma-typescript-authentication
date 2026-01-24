@@ -1,57 +1,45 @@
 import { Request, Response } from 'express';
-
 import { z } from 'zod';
-import { createAlunoSchema, updateAlunoSchema } from '../../dto/tenant/aluno-futebol.dto';
-import { AlunoService } from '../../services/tenant/aluno-futebol.service';
+import { createAlunoFutebolSchema, updateAlunoFutebolSchema } from '../../dto/tenant/aluno-futebol.dto';
+import { AlunoFutebolService } from '../../services/tenant/aluno-futebol.service';
 
-const service = new AlunoService();
+
+const service = new AlunoFutebolService();
+
+// Função auxiliar para gerar senha aleatória
+function gerarSenhaAleatoria(tamanho = 10) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$";
+  let senha = "";
+  for (let i = 0; i < tamanho; i++) {
+    senha += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return senha;
+}
 
 export const createAluno = async (req: Request, res: Response) => {
+  console.log("Body recebido:", req.body);
   try {
-    const escolinhaId = req.escolinhaId!;
-    const data = createAlunoSchema.parse(req.body);
+    const escolinhaId = req.escolinhaId!; // vem do middleware de autenticação
+    const body = createAlunoFutebolSchema.parse(req.body);
 
-    // Normaliza email se fornecido
-    if (data.email) {
-      data.email = data.email.toLowerCase().trim();
-    }
-
-    // dataNascimento é obrigatório no DTO → já vem como Date (não null)
-    // Não precisa de ?? null aqui, pois Zod já garante que veio
-    if (!data.dataNascimento) {
-      return res.status(400).json({
-        error: 'Data de nascimento é obrigatória',
-      });
-    }
-
-    const aluno = await service.create(escolinhaId, data);
+    const result = await service.create(escolinhaId, body);
 
     res.status(201).json({
       success: true,
-      message: 'Aluno criado com sucesso',
-      data: aluno,
+      message: "Aluno criado com sucesso",
+      data: result,
+      senhaTemporaria: result.senhaTemporaria,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues.map(i => ({
-          field: i.path.join('.'),
-          message: i.message,
-        })),
+        error: "Dados inválidos",
+        details: error.issues,
       });
     }
 
-    // Captura erro específico de data inválida (se o frontend enviar string ruim)
-    if (error instanceof Error && error.message.includes('Invalid time value')) {
-      return res.status(400).json({
-        error: 'Data de nascimento inválida',
-        details: 'Formato esperado: data válida (YYYY-MM-DD ou parseável)',
-      });
-    }
-
-    console.error('[CreateAluno] Erro completo:', error);
-    res.status(500).json({ error: 'Erro interno ao criar aluno' });
+    console.error(error);
+    res.status(500).json({ error: "Erro interno ao criar aluno" });
   }
 };
 
@@ -61,8 +49,7 @@ export const listAlunos = async (req: Request, res: Response) => {
     const alunos = await service.list(escolinhaId);
     res.json({ success: true, data: alunos });
   } catch (error) {
-    console.error('[ListAlunos] Erro:', error);
-    res.status(500).json({ error: 'Erro ao listar alunos' });
+    res.status(500).json({ error: "Erro ao listar alunos" });
   }
 };
 
@@ -71,13 +58,10 @@ export const getAlunoById = async (req: Request, res: Response) => {
     const escolinhaId = req.escolinhaId!;
     const { id } = req.params;
 
-    const aluno = await service.findById(escolinhaId, id);
+    const aluno = await service.getById(escolinhaId, id);
     res.json({ success: true, data: aluno });
   } catch (error: any) {
-    if (error.message.includes('não encontrado')) {
-      return res.status(404).json({ error: error.message });
-    }
-    res.status(500).json({ error: 'Erro ao buscar aluno' });
+    res.status(404).json({ error: error.message || "Aluno não encontrado" });
   }
 };
 
@@ -85,28 +69,20 @@ export const updateAluno = async (req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;
     const { id } = req.params;
-    const data = updateAlunoSchema.parse(req.body);
+    const body = updateAlunoFutebolSchema.parse(req.body);
 
-    if (data.email) {
-      data.email = data.email.toLowerCase().trim();
-    }
-
-    const aluno = await service.update(escolinhaId, id, data);
-
-    res.json({
-      success: true,
-      message: 'Aluno atualizado com sucesso',
-      data: aluno,
-    });
+    const updated = await service.update(escolinhaId, id, body);
+    res.json({ success: true, message: "Aluno atualizado com sucesso", data: updated });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
-        error: 'Dados inválidos',
+        error: "Dados inválidos",
         details: error.issues,
       });
     }
-    console.error('[UpdateAluno] Erro:', error);
-    res.status(500).json({ error: 'Erro ao atualizar aluno' });
+
+    console.error(error);
+    res.status(500).json({ error: "Erro ao atualizar aluno" });
   }
 };
 
@@ -116,10 +92,8 @@ export const deleteAluno = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     await service.delete(escolinhaId, id);
-
-    res.json({ success: true, message: 'Aluno excluído com sucesso' });
+    res.json({ success: true, message: "Aluno deletado com sucesso" });
   } catch (error: any) {
-    console.error('[DeleteAluno] Erro:', error);
-    res.status(500).json({ error: error.message || 'Erro ao excluir aluno' });
+    res.status(404).json({ error: error.message || "Aluno não encontrado" });
   }
 };

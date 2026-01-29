@@ -28,11 +28,13 @@ router.get('/responsaveis', authMiddleware, roleGuard('ADMIN'), listResponsaveis
 router.get('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), getResponsavelById);
 router.post('/responsaveis', authMiddleware, roleGuard('ADMIN'), createResponsavel);
 router.put('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
+router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
 
 // Alunos (protegidos por ADMIN do tenant)
 router.post('/alunos', authMiddleware, roleGuard('ADMIN'), createAluno);
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
+router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
 router.get('/alunos/:id', authMiddleware, roleGuard('ADMIN'), getAlunoById);
 router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);

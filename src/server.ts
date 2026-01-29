@@ -14,12 +14,16 @@ const app = express();
 
 app.use(morgan("tiny"));
 
-app.use(cors({
-  origin: 'http://localhost:3000', // ← origem do seu Next.js
-  credentials: true, // se usar cookies no futuro
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000", // origem do frontend
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], // permite PATCH!
+    allowedHeaders: ["Content-Type", "Authorization"], // cabeçalhos comuns
+    credentials: true, // se usar cookies ou auth com credentials
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  })
+);
 
 //app.use(helmet());
 

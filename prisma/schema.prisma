@@ -41,8 +41,8 @@ model User {
   alunoFutebolId String?       @unique
   alunoFutebol   AlunoFutebol? @relation(fields: [alunoFutebolId], references: [id])
 
-  alunoCrossfitId String?          @unique
-  alunoCrossfit   ClienteCrossfit? @relation(fields: [alunoCrossfitId], references: [id])
+  alunoCrossfitId String?        @unique
+  alunoCrossfit   AlunoCrossfit? @relation(fields: [alunoCrossfitId], references: [id])
 
   responsavelId String?      @unique
   responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
@@ -142,7 +142,7 @@ model Escolinha {
   // Relações
   users                User[] // 1:N (admins da escolinha)
   alunosFutebol        AlunoFutebol[]
-  alunosCrossfit       ClienteCrossfit[]
+  alunosCrossfit       AlunoCrossfit[]
   funcionarios         Funcionario[]
   responsaveis         Responsavel[]
   treinos              Treino[]
@@ -215,23 +215,25 @@ model AlunoFutebol {
 }
 
 // ==================== ALUNO CROSSFIT ====================
-model ClienteCrossfit {
-  id          String   @id @default(uuid())
-  nome        String
-  cpf         String?  @unique
-  email       String   @unique
-  fotoUrl     String?
-  observacoes String?
-  frequencia  Int      @default(0)
-  createdAt   DateTime @default(now())
+model AlunoCrossfit {
+  id             String   @id @default(uuid())
+  nome           String
+  cpf            String?  @unique
+  email          String   @unique
+  telefone       String?
+  dataNascimento DateTime
+  fotoUrl        String?
+  observacoes    String?
+  frequencia     Int      @default(0)
+  status         String   @default("ativo")
+  createdAt      DateTime @default(now())
 
   escolinha    Escolinha             @relation(fields: [escolinhaId], references: [id])
   escolinhaId  String
   presencas    PresencaCrossfit[]
   mensalidades MensalidadeCrossfit[]
 
-  userId String? @unique // ← FK simples + @unique
-  // NÃO coloque user User? @relation(...) aqui
+  userId String? @unique
   user   User?
 }
 
@@ -279,21 +281,21 @@ model MensalidadeFutebol {
 
 // ==================== MENSALIDADE CROSSFIT ====================
 model MensalidadeCrossfit {
-  id              String          @id @default(uuid())
+  id              String        @id @default(uuid())
   clienteId       String
-  cliente         ClienteCrossfit @relation(fields: [clienteId], references: [id])
+  cliente         AlunoCrossfit @relation(fields: [clienteId], references: [id])
   escolinhaId     String
-  escolinha       Escolinha       @relation(fields: [escolinhaId], references: [id])
+  escolinha       Escolinha     @relation(fields: [escolinhaId], references: [id])
   mesReferencia   DateTime
   valor           Float
   dataVencimento  DateTime
   dataPagamento   DateTime?
-  status          String          @default("pendente")
+  status          String        @default("pendente")
   metodoPagamento String?
   pagamentoId     String?
-  pagamento       Pagamento?      @relation(fields: [pagamentoId], references: [id])
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  pagamento       Pagamento?    @relation(fields: [pagamentoId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@unique([clienteId, mesReferencia])
 }
@@ -378,7 +380,7 @@ model PresencaCrossfit {
 
   // Relação direta com cliente
   clienteId String
-  cliente   ClienteCrossfit @relation(fields: [clienteId], references: [id])
+  cliente   AlunoCrossfit @relation(fields: [clienteId], references: [id])
 
   // Relação DIRETA com a escolinha
   escolinhaId String

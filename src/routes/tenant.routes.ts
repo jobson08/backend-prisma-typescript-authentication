@@ -2,11 +2,14 @@
 import { Router } from 'express';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
-import { getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
+
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno } from '../controllers/tenant/aluno-futebol.controller';
+import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
+import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-crossfit.controller';
+import { getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -14,7 +17,8 @@ const router = Router();
 // Proteção: só ADMIN da escolinha pode acessar essas rotas
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
 
-router.get('/dashboard', getDashboardTenant);
+router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDashboardTenant);
+
 //Rotas Funcionario
 router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
 router.get('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, listFuncionarios);
@@ -38,6 +42,33 @@ router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
 router.get('/alunos/:id', authMiddleware, roleGuard('ADMIN'), getAlunoById);
 router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);
+
+// aluno crossfit (protegidos por ADMIN do tenant)
+router.post('/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), createAlunoCrossfit);
+router.get( '/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), listAlunosCrossfit);
+router.get('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), getAlunoCrossfitById);
+router.patch('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);
+router.put('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);
+router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteAlunoCrossfit);
+
+
+//rota criar pagamentos
+
+//pagamentos alunoCrossfit
+
+// Geração MANUAL (admin cria para um aluno específico)
+router.post(
+  '/alunos-crossfit/:alunoId/mensalidades/manual',
+  roleGuard('ADMIN'),
+  pagamentosCrossfitController.createManual.bind(pagamentosCrossfitController)
+);
+
+// Geração AUTOMÁTICA (chamada por cron job ou manualmente pelo admin)
+router.post(
+  '/mensalidades-crossfit/gerar-automaticas',
+  roleGuard('ADMIN'), // ou crie um middleware específico para cron
+  pagamentosCrossfitController.generateAutomatic.bind(pagamentosCrossfitController)
+);
 
 // Aqui você pode adicionar mais rotas do tenant no futuro:
 // router.get('/alunos', getAlunosTenant);

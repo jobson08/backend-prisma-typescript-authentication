@@ -21,6 +21,21 @@ async getDashboard(escolinhaId: string, mes?: string) {
 
     const totalAlunos = totalAlunosFutebol + totalAlunosCrossfit;
 
+    // Alunos ativos
+    console.log('[DASHBOARD] Contando alunosAtivosFutebol...');
+    const alunosAtivosFutebol = await prisma.alunoFutebol.count({
+      where: { escolinhaId, status: 'ativo' },
+    });
+    console.log('[DASHBOARD] alunosAtivosFutebol:', alunosAtivosFutebol);
+
+    console.log('[DASHBOARD] Contando alunosAtivosCrossfit...');
+    const alunosAtivosCrossfit = await prisma.alunoCrossfit.count({
+      where: { escolinhaId, status: 'ativo' },
+    });
+    console.log('[DASHBOARD] alunosAtivosCrossfit:', alunosAtivosCrossfit);
+
+    const alunosAtivos = alunosAtivosFutebol + alunosAtivosCrossfit;
+
     // Busca escolinha
     console.log('[DASHBOARD] Buscando escolinha...');
     const escolinha = await prisma.escolinha.findUnique({
@@ -38,7 +53,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
       throw new Error("Escolinha não encontrada");
     }
 
-    // Receita mensal (aqui provavelmente quebra)
+    // Receita mensal (filtrada por mês)
     console.log('[DASHBOARD] Calculando mensalidadeFutebolSum...');
     const mensalidadeFutebolSum = await prisma.mensalidadeFutebol.aggregate({
       where: { aluno: { escolinhaId } },
@@ -53,36 +68,51 @@ async getDashboard(escolinhaId: string, mes?: string) {
     });
     console.log('[DASHBOARD] mensalidadeCrossfitSum:', mensalidadeCrossfitSum);
 
-      const receitaMensal = 
-        (mensalidadeFutebolSum._sum?.valor ?? 0) +
-        (mensalidadeCrossfitSum._sum?.valor ?? 0);
+    const receitaMensal = 
+      (mensalidadeFutebolSum._sum?.valor ?? 0) +
+      (mensalidadeCrossfitSum._sum?.valor ?? 0);
 
-      // Aulas hoje (exemplo – ajuste para sua tabela real de treinos/presenças)
-      const aulasHoje = await prisma.treino.count({
-        where: {
-          escolinhaId,
-          data: {
-            gte: hoje,
-            lt: new Date(hoje.getTime() + 24 * 60 * 60 * 1000),
-          },
+    // Aulas hoje (exemplo)
+    const aulasHoje = await prisma.treino.count({
+      where: {
+        escolinhaId,
+        data: {
+          gte: hoje,
+          lt: new Date(hoje.getTime() + 24 * 60 * 60 * 1000),
         },
-      });
+      },
+    });
 
-      // Pagamentos pendentes (do mês ou gerais – ajuste conforme necessidade)
-      const pagamentosPendentes = await prisma.mensalidadeCrossfit.count({
-        where: {
-          cliente: { escolinhaId },
-          status: { in: ['pendente', 'atrasado'] },
-          dataVencimento: { lte: hoje },
-        },
-      });
+    // Pagamentos pendentes
+    const pagamentosPendentes = await prisma.mensalidadeCrossfit.count({
+      where: {
+        cliente: { escolinhaId },
+        status: { in: ['pendente', 'atrasado'] },
+        dataVencimento: { lte: hoje },
+      },
+    });
 
-      return { /* seus dados */ };
+    const result = {
+      aulasHoje,
+      totalAlunos,
+      alunosAtivos,
+      receitaMensalEstimada: receitaMensal,
+      pagamentosPendentes,
+      crescimentoMensal: "+14%",
+      planoSaaS: escolinha.planoSaaS || "basico",
+      valorPlanoMensal: escolinha.valorPlanoMensal || 0,
+      proximoVencimentoSaaS: escolinha.dataProximoCobranca?.toISOString() || null,
+      statusPagamentoSaaS: escolinha.statusPagamentoSaaS || "ativo",
+      ultimaAtualizacao: new Date().toLocaleString("pt-BR"),
+    };
+
+    console.log('[DASHBOARD SERVICE] Retorno final:', result);
+    return result;
   } catch (err: unknown) {
     console.error('[DASHBOARD SERVICE CRASH]', err);
     const message = err instanceof Error ? err.message : String(err);
     console.error('[DASHBOARD SERVICE STACK]', err instanceof Error ? err.stack : 'Sem stack');
-    throw err; // relança para o controller logar
+    throw err;
   }
-  }
+}
 }

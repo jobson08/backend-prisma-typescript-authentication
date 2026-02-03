@@ -77,6 +77,16 @@ enum PagamentoStatus {
   CANCELADO
 }
 
+enum MetodoPagamento {
+  PIX
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  BOLETO
+  DINHEIRO
+  TRANSFERENCIA
+  OUTRO
+}
+
 model Pagamento {
   id          String    @id @default(uuid())
   escolinhaId String
@@ -86,13 +96,23 @@ model Pagamento {
   responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
 
   valor          Float
-  dataVencimento DateTime? // ← ADICIONE: data prevista para pagamento
-  dataPagamento  DateTime?       @default(now()) // ← permite null se ainda não pago
-  metodo         String?
-  tipo           String // "mensalidade_futebol", "mensalidade_crossfit", "aula_extra", "saas"
-  referenciaId   String
-  status         PagamentoStatus @default(PENDENTE) // ← use enum para consistência
+  dataVencimento DateTime // ← ADICIONE: data prevista para pagamento
+  dataPagamento  DateTime? // ← REMOVA @default(now()) - só preenche quando pago
+
+  metodo MetodoPagamento? // ← troque para enum (se quiser, opcional agora)
+  tipo   String // "mensalidade_futebol", "mensalidade_crossfit", "aula_extra", "saas"
+
+  referenciaId String
+  status       PagamentoStatus @default(PENDENTE) // ← use enum para consistência
+
   comprovanteUrl String?
+
+  // Campos NOVOS (adicionados como opcionais → sem migration destrutiva)
+  planoSaaS  String? // ex: "basico", "pro" – útil para histórico
+  observacao String? // motivo da cobrança manual, ajuste, atraso
+
+  //atualizadoPorId String?   // ← NOVO campo
+  //atualizadoPor   User?     @relation(fields: [atualizadoPorId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -104,6 +124,7 @@ model Pagamento {
   @@index([escolinhaId, dataVencimento])
   @@index([escolinhaId, status])
   @@index([tipo])
+  @@index([referenciaId])
 }
 
 // ==================== ESCOLINHA ====================

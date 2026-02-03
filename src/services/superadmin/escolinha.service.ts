@@ -1,8 +1,7 @@
 // src/services/escolinha.service.ts
-import { prisma } from '../config/database';
+import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
-import { CreateEscolinhaDto } from '../dto/create-escolinha.dto';
-import { Prisma } from '@prisma/client';
+import { CreateEscolinhaDto } from '../../dto/create-escolinha.dto';
 
 export class EscolinhaService {
   async criarEscolinha(data: CreateEscolinhaDto) {
@@ -180,25 +179,35 @@ export class EscolinhaService {
     });
   }
 
-  async suspenderPagamento(id: string) {
+ async suspenderPagamento(id: string, motivo?: string) {
+  try {
     const escolinha = await prisma.escolinha.findUnique({
       where: { id },
-      select: { statusPagamentoSaaS: true },
     });
 
     if (!escolinha) {
-      throw new Error("Escolinha não encontrada");
+      throw new Error('Escolinha não encontrada');
     }
 
-    if (escolinha.statusPagamentoSaaS === "suspenso") {
-      throw new Error("Pagamento já está suspenso");
+    if (escolinha.statusPagamentoSaaS === 'suspenso') {
+      throw new Error('Escolinha já está suspensa');
     }
 
-    return await prisma.escolinha.update({
+    const atualizada = await prisma.escolinha.update({
       where: { id },
       data: {
-        statusPagamentoSaaS: "suspenso",
+        statusPagamentoSaaS: 'suspenso',
+        // Se tiver campo para motivo ou data de suspensão
+        // suspensaoMotivo: motivo || null,
+        // dataSuspensao: new Date(),
       },
     });
+
+    console.log(`[SUSPENDER PAGAMENTO] Escolinha ${id} suspensa. Motivo: ${motivo || 'não informado'}`);
+    return atualizada;
+  } catch (err: unknown) {
+    console.error('[SUSPENDER PAGAMENTO ERROR]', err);
+    throw err;
   }
+}
 }

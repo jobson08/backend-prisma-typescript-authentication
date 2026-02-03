@@ -1,5 +1,5 @@
-import { prisma } from '../config/database';
-import { CreateFuncionarioDto, UpdateFuncionarioDto } from '../dto/tenant/funcionario.dto';
+import { prisma } from '../../config/database';
+import { CreateFuncionarioDto, UpdateFuncionarioDto } from '../../dto/tenant/funcionario.dto';
 
 export class FuncionarioService {
   async create(escolinhaId: string, data: CreateFuncionarioDto) {

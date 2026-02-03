@@ -1,7 +1,10 @@
 // src/routes/superadmin.routes.ts
 import { Router } from 'express';
-import { atualizarEscolinha, atualizarPlano, buscarEscolinha, criarEscolinha, dashboard, listarEscolinhas, listarPagamentos, suspenderPagamento } from '../controllers/superadmin.controller';
+
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
+import { atualizarEscolinha, atualizarPlano, buscarEscolinha, criarEscolinha, dashboard, listarEscolinhas, listarPagamentos, suspenderPagamento } from '../controllers/superadmin/superadmin.controller';
+import { saasPagamentoController } from '../controllers/superadmin/saas-pagamento.controller';
+
 
 const router = Router();
 
@@ -31,4 +34,25 @@ router.put('/escolinhas/:id/suspender', authMiddleware, roleGuard('SUPERADMIN'),
 //CALCULAR RECEITA
 router.get('/dashboard', authMiddleware, roleGuard('SUPERADMIN'), dashboard);
 
+//pagamento ssas escolinhas
+// Rota para criação manual
+router.post(
+  '/escolinhas/:escolinhaId/pagamentos-saas/manual', authMiddleware,
+  roleGuard('SUPERADMIN'),
+  saasPagamentoController.createManual.bind(saasPagamentoController)
+);
+
+// Trigger manual da geração automática (somente SUPERADMIN, para testes)
+router.post(
+  '/pagamentos-saas/gerar-automaticas', authMiddleware,
+  roleGuard('SUPERADMIN'),
+  saasPagamentoController.triggerAutomatic.bind(saasPagamentoController)
+);
+
+//resgistrar pagamento na pagina pagamento manual
+router.put(
+  '/pagamentos/:pagamentoId/marcar-pago',authMiddleware,
+  roleGuard('SUPERADMIN'),
+  saasPagamentoController.marcarPago.bind(saasPagamentoController)
+);
 export default router;

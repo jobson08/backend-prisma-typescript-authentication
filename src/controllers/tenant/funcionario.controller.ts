@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { FuncionarioService } from '../../services/funcionario.service';
+import { FuncionarioService } from '../../services/superadmin/funcionario.service';
 import { createFuncionarioSchema, updateFuncionarioSchema } from '../../dto/tenant/funcionario.dto';
 import { z } from 'zod';
 import { prisma } from '../../server';

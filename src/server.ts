@@ -14,16 +14,17 @@ const app = express();
 
 app.use(morgan("tiny"));
 
-app.use(
-  cors({
-    origin: "http://localhost:3000", // origem do frontend
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"], // permite PATCH!
-    allowedHeaders: ["Content-Type", "Authorization"], // cabeçalhos comuns
-    credentials: true, // se usar cookies ou auth com credentials
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  })
-);
+app.use(cors({
+  origin: [
+    'http://localhost:3000',          // frontend dev
+    'https://seusite.com',            // produção (adicione quando deployar)
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],  // inclui PUT e OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'],  // headers que você usa
+  credentials: true,  // se usar cookies ou auth com credentials
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+}));
 
 //app.use(helmet());
 

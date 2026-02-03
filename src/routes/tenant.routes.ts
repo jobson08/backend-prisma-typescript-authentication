@@ -58,14 +58,14 @@ router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteA
 
 // Geração MANUAL (admin cria para um aluno específico)
 router.post(
-  '/alunos-crossfit/:alunoId/mensalidades/manual',
+  '/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware,
   roleGuard('ADMIN'),
   pagamentosCrossfitController.createManual.bind(pagamentosCrossfitController)
 );
 
 // Geração AUTOMÁTICA (chamada por cron job ou manualmente pelo admin)
 router.post(
-  '/mensalidades-crossfit/gerar-automaticas',
+  '/mensalidades-crossfit/gerar-automaticas',authMiddleware,
   roleGuard('ADMIN'), // ou crie um middleware específico para cron
   pagamentosCrossfitController.generateAutomatic.bind(pagamentosCrossfitController)
 );

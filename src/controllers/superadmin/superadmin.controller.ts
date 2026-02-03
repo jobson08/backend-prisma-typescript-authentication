@@ -1,10 +1,13 @@
 // src/controllers/superadmin.controller.ts
 import { Request, Response } from 'express';
-import { createEscolinhaSchema } from '../dto/create-escolinha.dto';
-import { EscolinhaService } from '../services/escolinha.service';
+import { createEscolinhaSchema } from '../../dto/create-escolinha.dto';
+import { EscolinhaService } from '../../services/superadmin/escolinha.service';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { z } from 'zod';
-import { prisma } from '../config/database';
-import { Prisma } from '../../generated/prisma';
+import { prisma } from '../../config/database';
+import { Prisma } from '../../../generated/prisma';
+
 
 const escolinhaService = new EscolinhaService();
 
@@ -30,8 +33,8 @@ export const criarEscolinha = async (req: Request, res: Response) => {
 
     const escolinha = await escolinhaService.criarEscolinha({
       ...data,
-      dataInicioPlano,
-      dataProximoCobranca,
+     // dataInicioPlano,
+     // dataProximoCobranca,
       statusPagamentoSaaS: data.statusPagamentoSaaS || "ativo",
       cidade: data.cidade,
       estado: data.estado,
@@ -195,29 +198,66 @@ export const atualizarEscolinha = async (req: Request, res: Response) => {
 // ======================== LISTAR PAGAMENTOS ========================
 export const listarPagamentos = async (req: Request, res: Response) => {
   try {
-    const pagamentos = await prisma.pagamento.findMany({
-      include: {
-        escolinha: {
-          select: { nome: true, planoSaaS: true },
+    const { mes, page = '1', limit = '10', status, tipo } = req.query;
+
+    const pageNum = parseInt(page as string) || 1;
+    const take = parseInt(limit as string) || 10;
+    const skip = (pageNum - 1) * take;
+
+    // Filtro por mês (padrão: mês atual se não informado)
+    let where: any = {};
+    let mesFiltro = mes as string | undefined;
+
+    if (!mesFiltro || mesFiltro === 'todos') {
+      // Mês atual como fallback
+      const hoje = new Date();
+      const inicio = startOfMonth(hoje);
+      const fim = endOfMonth(hoje);
+      where.dataVencimento = { gte: inicio, lt: fim };
+    } else if (/^\d{4}-\d{2}$/.test(mesFiltro)) {
+      const [ano, mesNum] = mesFiltro.split('-').map(Number);
+      const inicio = startOfMonth(new Date(ano, mesNum - 1, 1));
+      const fim = endOfMonth(new Date(ano, mesNum - 1, 1));
+      where.dataVencimento = { gte: inicio, lt: fim };
+    }
+
+    // Filtros adicionais
+    if (status && typeof status === 'string') {
+      where.status = status.toUpperCase();
+    }
+    if (tipo && typeof tipo === 'string') {
+      where.tipo = tipo;
+    }
+
+    const [pagamentos, total] = await Promise.all([
+      prisma.pagamento.findMany({
+        where,
+        include: {
+          escolinha: { select: { nome: true, planoSaaS: true } },
         },
-      },
-      orderBy: { dataPagamento: 'desc' },
-    });
+        orderBy: { dataVencimento: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.pagamento.count({ where }),
+    ]);
 
     const formatted = pagamentos.map(p => ({
       id: p.id,
-      escolinha: p.escolinha.nome,
-      plano: p.escolinha.planoSaaS,
+      escolinha: p.escolinha?.nome || "Escolinha não encontrada",
+      plano: p.escolinha?.planoSaaS || "Desconhecido",
       valor: p.valor,
-      dataPagamento: p.dataPagamento?.toISOString() || null,
-      dataVencimento: p.dataVencimento?.toISOString() || null, // se existir no schema
+      dataPagamento: p.dataPagamento ? format(p.dataPagamento, 'dd/MM/yyyy HH:mm', { locale: ptBR }) : null,
+      dataVencimento: p.dataVencimento ? format(p.dataVencimento, 'dd/MM/yyyy', { locale: ptBR }) : null,
       status: p.status,
       metodo: p.metodo || "Não informado",
     }));
 
     res.status(200).json({
       success: true,
-      count: formatted.length,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / take),
       data: formatted,
     });
   } catch (error: any) {
@@ -232,15 +272,19 @@ export const atualizarPlano = async (req: Request, res: Response) => {
   const { planoSaaS, valorPlanoMensal } = req.body;
 
   try {
-    if (!planoSaaS || typeof valorPlanoMensal !== "number") {
-      return res.status(400).json({ error: "Plano e valor obrigatórios" });
+    if (!planoSaaS || !['basico', 'pro', 'enterprise'].includes(planoSaaS)) {
+      return res.status(400).json({ error: "Plano inválido (basico, pro, enterprise)" });
+    }
+
+    if (typeof valorPlanoMensal !== "number" || valorPlanoMensal <= 0) {
+      return res.status(400).json({ error: "Valor do plano deve ser maior que zero" });
     }
 
     const atualizada = await escolinhaService.atualizarPlano(id, planoSaaS, valorPlanoMensal);
 
     res.status(200).json({
       success: true,
-      message: "Plano atualizado!",
+      message: "Plano atualizado com sucesso",
       data: atualizada,
     });
   } catch (error: any) {
@@ -252,13 +296,23 @@ export const atualizarPlano = async (req: Request, res: Response) => {
 // ======================== SUSPENDER PAGAMENTO ========================
 export const suspenderPagamento = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { motivo } = req.body;
 
   try {
-    const atualizada = await escolinhaService.suspenderPagamento(id);
+    const escolinha = await prisma.escolinha.findUnique({ where: { id } });
+    if (!escolinha) {
+      return res.status(404).json({ error: "Escolinha não encontrada" });
+    }
+
+    if (escolinha.statusPagamentoSaaS === 'suspenso') {
+      return res.status(400).json({ error: "Escolinha já está suspensa" });
+    }
+
+    const atualizada = await escolinhaService.suspenderPagamento(id, motivo || 'Suspensão manual por superAdmin');
 
     res.status(200).json({
       success: true,
-      message: "Pagamento suspenso!",
+      message: "Pagamento suspenso com sucesso",
       data: atualizada,
     });
   } catch (error: any) {
@@ -270,12 +324,33 @@ export const suspenderPagamento = async (req: Request, res: Response) => {
 // ======================== DASHBOARD ========================
 export const dashboard = async (req: Request, res: Response) => {
   try {
+    const { mes } = req.query; // ?mes=YYYY-MM ou omitido (usa mês atual)
+
+    // Define intervalo de data (mês atual ou selecionado)
+    let inicioMes: Date;
+    let fimMes: Date;
+
+    if (mes && typeof mes === 'string' && /^\d{4}-\d{2}$/.test(mes)) {
+      const [ano, mesNum] = mes.split('-').map(Number);
+      inicioMes = startOfMonth(new Date(ano, mesNum - 1, 1));
+      fimMes = endOfMonth(new Date(ano, mesNum - 1, 1));
+    } else {
+      // Mês atual como padrão
+      const hoje = new Date();
+      inicioMes = startOfMonth(hoje);
+      fimMes = endOfMonth(hoje);
+    }
+
+    // Totais gerais (não dependem do mês)
     const totalEscolinhas = await prisma.escolinha.count();
     const escolinhasAtivas = await prisma.escolinha.count({
       where: { statusPagamentoSaaS: "ativo" },
     });
-    const totalAlunos = await prisma.alunoFutebol.count() + await prisma.clienteCrossfit.count();
+    const totalAlunos = 
+      (await prisma.alunoFutebol.count()) + 
+      (await prisma.alunoCrossfit.count());
 
+    // Atividade recente (últimos 5 cadastros ou ações)
     const atividadeRecente = await prisma.escolinha.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -285,26 +360,63 @@ export const dashboard = async (req: Request, res: Response) => {
       },
     });
 
+    // Receita mensal real (somente SaaS do mês selecionado)
+    const receitaMensalResult = await prisma.pagamento.aggregate({
+      where: {
+        tipo: 'saas',
+        dataVencimento: { gte: inicioMes, lt: fimMes },
+        status: { in: ['CONFIRMADO'] }, // ajuste conforme seu enum
+      },
+      _sum: { valor: true },
+    });
+    const receitaMensal = receitaMensalResult._sum.valor || 0;
+
+    // Receita anual projetada (estimativa simples: 12 × mensal)
+    const receitaAnual = receitaMensal * 12;
+
+    // Crescimento mensal (comparação com mês anterior - opcional)
+    const mesAnteriorInicio = startOfMonth(subMonths(inicioMes, 1));
+    const mesAnteriorFim = endOfMonth(subMonths(inicioMes, 1));
+
+    const receitaMesAnteriorResult = await prisma.pagamento.aggregate({
+      where: {
+        tipo: 'saas',
+        dataVencimento: { gte: mesAnteriorInicio, lt: mesAnteriorFim },
+        status: { in: ['CONFIRMADO'] },
+      },
+      _sum: { valor: true },
+    });
+    const receitaMesAnterior = receitaMesAnteriorResult._sum.valor || 0;
+
+    const crescimentoMensal = receitaMesAnterior === 0
+      ? "+∞%"
+      : ((receitaMensal - receitaMesAnterior) / receitaMesAnterior * 100).toFixed(1) + '%';
+
+    // Ticket médio (receita mensal / número de escolinhas pagantes)
+    const ticketMedio = escolinhasAtivas > 0
+      ? (receitaMensal / escolinhasAtivas).toFixed(2)
+      : "0.00";
+
     res.status(200).json({
       success: true,
       data: {
         totalEscolinhas,
         escolinhasAtivas,
         totalAlunos,
-        receitaMensal: 185420, // TODO: calcular real
-        receitaAnual: 2225040, // TODO: calcular real
-        crescimentoMensal: "+18.4%",
-        ticketMedio: "R$ 271",
-        ultimaAtualizacao: new Date().toLocaleString("pt-BR"),
+        receitaMensal,
+        receitaAnual,
+        crescimentoMensal,
+        ticketMedio: `R$ ${ticketMedio}`,
+        ultimaAtualizacao: format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }),
         atividadeRecente: atividadeRecente.map(e => ({
           nome: e.nome,
           acao: "Novo cadastro",
-          data: new Date(e.createdAt).toLocaleString("pt-BR"),
+          data: format(e.createdAt, "dd/MM/yyyy HH:mm", { locale: ptBR }),
         })),
       },
     });
-  } catch (error) {
-    console.error('Erro no dashboard:', error);
+  } catch (error: any) {
+    console.error('[SUPERADMIN DASHBOARD] Erro:', error);
     res.status(500).json({ error: 'Erro ao carregar dashboard' });
   }
 };

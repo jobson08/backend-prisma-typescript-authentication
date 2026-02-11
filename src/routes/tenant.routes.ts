@@ -9,7 +9,8 @@ import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsav
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno } from '../controllers/tenant/aluno-futebol.controller';
 import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
 import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-crossfit.controller';
-import { getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
+import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
+import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -53,9 +54,23 @@ router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteA
 
 
 //rota criar pagamentos
+//pagamentos Aluno futebol
+// POST /tenant/alunos/:alunoId/pagamentos
+router.post('/alunos/:alunoId/pagamentos',  
+  authMiddleware, 
+  roleGuard('ADMIN'),
+  pagamentosFutebolController.createManual);
+
+// Cron (pode ser protegida ou pública, dependendo da segurança)
+router.post('/pagamentos-futebol/generate-automatic',  
+  pagamentosFutebolController.generateAutomatic);
+
+  // Get pagamentos aluno
+  router.get('/alunos/:alunoId/pagamentos', 
+    authMiddleware, roleGuard('ADMIN'),
+    pagamentosFutebolController.listByAluno);
 
 //pagamentos alunoCrossfit
-
 // Geração MANUAL (admin cria para um aluno específico)
 router.post(
   '/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware,
@@ -70,10 +85,13 @@ router.post(
   pagamentosCrossfitController.generateAutomatic.bind(pagamentosCrossfitController)
 );
 
-// Aqui você pode adicionar mais rotas do tenant no futuro:
-// router.get('/alunos', getAlunosTenant);
-// router.post('/funcionarios', createFuncionarioTenant);
-// etc.
+//rotas todos alunos inadiplentes
+router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAlunosInadimplentes);
+
+//rotas todos alunos aniversariantes-semana
+router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
+
+
 
 // Criar ou editar login para QUALQUER entidade
 router.post(

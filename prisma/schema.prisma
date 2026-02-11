@@ -290,10 +290,11 @@ model MensalidadeFutebol {
   valor           Float
   dataVencimento  DateTime
   dataPagamento   DateTime?
-  status          String       @default("pendente")
+  status          String       @default("pendente") // pendente, pago, atrasado, cancelado...
   metodoPagamento String?
   pagamentoId     String?
   pagamento       Pagamento?   @relation(fields: [pagamentoId], references: [id])
+  observacao      String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

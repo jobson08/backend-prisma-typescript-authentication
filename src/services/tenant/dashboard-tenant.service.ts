@@ -3,11 +3,10 @@ import { prisma } from '../../config/database';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Interfaces de saída (para frontend)
 interface Inadimplente {
   id: string;
   alunoNome: string;
-  //responsavelNome: string | null;
+  responsavelNome: string | null;
   valorDevido: number;
   dataVencimento: string;
   status: string;
@@ -22,17 +21,13 @@ interface Aniversariante {
   modalidade: 'futebol' | 'crossfit';
 }
 
-// Tipos manuais para o include (evita problemas com Prisma.GetPayload)
 type MensalidadeFutebolWithAluno = {
   id: string;
   alunoId: string;
   valor: number;
   dataVencimento: Date;
   status: string;
-  aluno: {
-    nome: string;
-    responsavel: { nome: string } | null;
-  };
+  aluno: { nome: string; responsavel: { nome: string } | null };
 };
 
 type MensalidadeCrossfitWithCliente = {
@@ -41,10 +36,7 @@ type MensalidadeCrossfitWithCliente = {
   valor: number;
   dataVencimento: Date;
   status: string;
-  cliente: {
-    nome: string;
-    responsavel: { nome: string } | null;
-  };
+  cliente: { nome: string };
 };
 
 export class DashboardTenantService {
@@ -61,24 +53,20 @@ export class DashboardTenantService {
       const mesFim = endOfMonth(mesInicio);
 
       // Total de alunos
-      const totalAlunosFutebol = await prisma.alunoFutebol.count({ 
-        where: { escolinhaId, deletedAt: null } 
-      });
-      const totalAlunosCrossfit = await prisma.alunoCrossfit.count({ 
-        where: { escolinhaId, deletedAt: null } 
-      });
+      const totalAlunosFutebol = await prisma.alunoFutebol.count({ where: { escolinhaId } });
+      const totalAlunosCrossfit = await prisma.alunoCrossfit.count({ where: { escolinhaId } });
       const totalAlunos = totalAlunosFutebol + totalAlunosCrossfit;
 
       // Alunos ativos
       const alunosAtivosFutebol = await prisma.alunoFutebol.count({
-        where: { escolinhaId, status: 'ativo', deletedAt: null },
+        where: { escolinhaId, status: 'ativo' },
       });
       const alunosAtivosCrossfit = await prisma.alunoCrossfit.count({
-        where: { escolinhaId, status: 'ativo', deletedAt: null },
+        where: { escolinhaId, status: 'ativo' },
       });
       const alunosAtivos = alunosAtivosFutebol + alunosAtivosCrossfit;
 
-      // Receita do mês (somente pagamentos confirmados no mês)
+      // Receita do mês (somente pagos no período)
       const receitaFutebol = await prisma.mensalidadeFutebol.aggregate({
         where: {
           aluno: { escolinhaId },
@@ -101,18 +89,15 @@ export class DashboardTenantService {
         (receitaFutebol._sum?.valor ?? 0) + 
         (receitaCrossfit._sum?.valor ?? 0);
 
-      // Aulas hoje (ajuste conforme seu model)
+      // Aulas hoje (ajuste o model se necessário)
       const aulasHoje = await prisma.treino?.count?.({
         where: {
           escolinhaId,
-          data: {
-            gte: hoje,
-            lt: addDays(hoje, 1),
-          },
+          data: { gte: hoje, lt: addDays(hoje, 1) },
         },
       }) ?? 0;
 
-      // Pagamentos pendentes (atrasados ou pendentes até hoje)
+      // Pagamentos pendentes (soma as duas modalidades)
       const pendentesFutebol = await prisma.mensalidadeFutebol.count({
         where: {
           aluno: { escolinhaId },
@@ -137,7 +122,7 @@ export class DashboardTenantService {
         alunosAtivos,
         receitaMensalEstimada: receitaMensal,
         pagamentosPendentes,
-        crescimentoMensal: "+14%", // ← ajuste com lógica real se quiser
+        crescimentoMensal: "+14%", // ← futuro: calcular real
         ultimaAtualizacao: new Date().toLocaleString("pt-BR"),
       };
 
@@ -159,7 +144,11 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
     const mesInicio = startOfMonth(new Date(mesReferencia));
     const mesFim = endOfMonth(mesInicio);
 
-    // Futebol (tem responsavel opcional)
+  //  console.log(`[INADIMPLENTES] Busca iniciada - escolinha: ${escolinhaId} | mês: ${mesReferencia}`);
+   // console.log(`[INADIMPLENTES] Intervalo: ${mesInicio.toISOString()} a ${mesFim.toISOString()}`);
+   // console.log(`[INADIMPLENTES] Data atual: ${hoje.toISOString()}`);
+
+    // 1. FUTEBOL - filtro mais amplo para debug
     const futebol = await prisma.mensalidadeFutebol.findMany({
       where: {
         aluno: { escolinhaId },
@@ -167,21 +156,25 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
         OR: [
           { status: 'pendente' },
           { status: 'atrasado' },
-          { status: 'pendente', dataVencimento: { lte: hoje } },
+          { dataVencimento: { lte: hoje } }, // ← inclui pendentes vencidos
         ],
       },
       include: {
         aluno: {
-          select: { 
-            nome: true, 
-            responsavel: { select: { nome: true } }  // ← só para futebol
-          },
+          select: { nome: true, responsavel: { select: { nome: true } } },
         },
       },
       orderBy: { dataVencimento: 'asc' },
     });
 
-    // Crossfit (sem responsavel)
+    //console.log(`[INADIMPLENTES] FUTEBOL - encontrados: ${futebol.length}`);
+    if (futebol.length > 0) {
+ //     console.log('[INADIMPLENTES] Exemplo FUTEBOL:', futebol[0]);
+    } else {
+   //   console.log('[INADIMPLENTES] Nenhum em FUTEBOL - verifique status/dataVencimento no banco');
+    }
+
+    // 2. CROSSFIT
     const crossfit = await prisma.mensalidadeCrossfit.findMany({
       where: {
         cliente: { escolinhaId },
@@ -189,17 +182,18 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
         OR: [
           { status: 'pendente' },
           { status: 'atrasado' },
-          { status: 'pendente', dataVencimento: { lte: hoje } },
+          { dataVencimento: { lte: hoje } },
         ],
       },
       include: {
-        cliente: {
-          select: { nome: true }  // ← sem responsavel
-        },
+        cliente: { select: { nome: true } },
       },
       orderBy: { dataVencimento: 'asc' },
     });
 
+   // console.log(`[INADIMPLENTES] CROSSFIT - encontrados: ${crossfit.length}`);
+
+    // Monta o array final
     const inadimplentes: Inadimplente[] = [
       ...futebol.map(m => ({
         id: m.id,
@@ -214,7 +208,7 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
       ...crossfit.map(m => ({
         id: m.id,
         alunoNome: m.cliente.nome,
-        responsavelNome: null,  // crossfit não tem
+        responsavelNome: null,
         valorDevido: m.valor,
         dataVencimento: m.dataVencimento.toISOString(),
         status: m.status,
@@ -223,9 +217,11 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
       })),
     ];
 
+   // console.log(`[INADIMPLENTES] Total retornado: ${inadimplentes.length}`);
+
     return inadimplentes;
   } catch (err) {
-    console.error('[getAlunosInadimplentes ERROR]', err);
+//   console.error('[getAlunosInadimplentes ERROR]', err);
     throw err;
   }
 }
@@ -233,7 +229,9 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
 async getAniversariantesSemana(escolinhaId: string): Promise<Aniversariante[]> {
   try {
     const hoje = new Date();
-    const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 });
+
+    // Agora as funções estão importadas → sem erro
+    const inicioSemana = startOfWeek(hoje, { weekStartsOn: 1 }); // segunda-feira
     const fimSemana = endOfWeek(hoje, { weekStartsOn: 1 });
 
     const futebol = await prisma.alunoFutebol.findMany({

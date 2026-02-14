@@ -92,7 +92,6 @@ router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAluno
 //rotas todos alunos aniversariantes-semana
 router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
 
-
 //pagamento aluno futebol e aluno crossfit 
 router.put(
   '/pagamentos/:pagamentoId/marcar-pago',

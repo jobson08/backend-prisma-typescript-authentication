@@ -17,7 +17,7 @@ function gerarSenhaAleatoria(tamanho = 10) {
 }
 
 export const createAlunoCrossfit = async (req: Request, res: Response) => {
-  console.log("Body recebido:", req.body);
+ // console.log("Body recebido:", req.body);
   try {
     const escolinhaId = req.escolinhaId!; // vem do middleware de autenticação
     const body = CreateAlunoCrossfitDTO.parse(req.body);
@@ -38,7 +38,7 @@ export const createAlunoCrossfit = async (req: Request, res: Response) => {
       });
     }
 
-    console.error("[CREATE ALUNO CROSSFIT] Erro:", error);
+   // console.error("[CREATE ALUNO CROSSFIT] Erro:", error);
     res.status(500).json({ error: "Erro interno ao criar aluno de CrossFit" });
   }
 };
@@ -49,7 +49,7 @@ export const listAlunosCrossfit = async (req: Request, res: Response) => {
     const alunos = await service.list(escolinhaId);
     res.json({ success: true, data: alunos });
   } catch (error) {
-    console.error("[LIST ALUNOS CROSSFIT] Erro:", error);
+  //  console.error("[LIST ALUNOS CROSSFIT] Erro:", error);
     res.status(500).json({ error: "Erro ao listar alunos de CrossFit" });
   }
 };
@@ -62,7 +62,7 @@ export const getAlunoCrossfitById = async (req: Request, res: Response) => {
     const aluno = await service.getById(escolinhaId, id);
     res.json({ success: true, data: aluno });
   } catch (error: any) {
-    console.error("[GET ALUNO CROSSFIT] Erro:", error);
+    //console.error("[GET ALUNO CROSSFIT] Erro:", error);
     res.status(404).json({ error: error.message || "Aluno de CrossFit não encontrado" });
   }
 };
@@ -87,7 +87,7 @@ export const updateAlunoCrossfit = async (req: Request, res: Response) => {
       });
     }
 
-    console.error("[UPDATE ALUNO CROSSFIT] Erro:", error);
+  //  console.error("[UPDATE ALUNO CROSSFIT] Erro:", error);
     res.status(500).json({ error: "Erro ao atualizar aluno de CrossFit" });
   }
 };
@@ -100,7 +100,7 @@ export const deleteAlunoCrossfit = async (req: Request, res: Response) => {
     await service.delete(escolinhaId, id);
     res.json({ success: true, message: "Aluno de CrossFit deletado com sucesso" });
   } catch (error: any) {
-    console.error("[DELETE ALUNO CROSSFIT] Erro:", error);
+  //  console.error("[DELETE ALUNO CROSSFIT] Erro:", error);
     res.status(404).json({ error: error.message || "Aluno de CrossFit não encontrado" });
   }
 };

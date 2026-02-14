@@ -30,7 +30,7 @@ export const getDashboardTenant = async (req: Request, res: Response) => {
       data: dashboard,
     });
   } catch (error: unknown) {
-    console.error('[getDashboardTenant] Erro:', error);
+  //  console.error('[getDashboardTenant] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno';
     return res.status(500).json({ error: message });
   }
@@ -57,7 +57,7 @@ export const getAlunosInadimplentes = async (req: Request, res: Response) => {
       data,
     });
   } catch (error: unknown) {
-    console.error('[getAlunosInadimplentes] Erro:', error);
+ //   console.error('[getAlunosInadimplentes] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno';
     return res.status(500).json({ error: message });
   }
@@ -70,7 +70,28 @@ export const getAniversariantesSemana = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Escolinha não identificada' });
     }
 
-    const data = await service.getAniversariantesSemana(escolinhaId);
+    // Pega o mês da query (opcional)
+    const { mes } = req.query;
+
+    // Validação flexível (aceita YYYY-MM ou YYYY-M)
+    let parsedMes: string | undefined = undefined;
+    if (mes) {
+      const mesStr = String(mes).trim();
+      const match = mesStr.match(/^(\d{4})-(\d{1,2})$/);
+      if (match) {
+        const ano = match[1];
+        const mesNum = match[2].padStart(2, '0');
+        parsedMes = `${ano}-${mesNum}`;
+      } else {
+        console.warn('[CONTROLLER ANIVERSARIANTES] Mês inválido:', mesStr);
+        return res.status(400).json({ 
+          success: false,
+          error: 'Formato de mês inválido. Use YYYY-MM ou YYYY-M (ex: 2026-02 ou 2026-2)' 
+        });
+      }
+    }
+
+    const data = await service.getAniversariantesSemana(escolinhaId, parsedMes);
 
     return res.status(200).json({
       success: true,

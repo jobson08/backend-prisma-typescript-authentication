@@ -8,7 +8,7 @@ async marcarComoPago(req: Request, res: Response) {
     const { pagamentoId } = req.params;
     const { metodo } = req.body || {};
 
-    console.log(`[MARCAR PAGO] Tentando atualizar ID: ${pagamentoId}`);
+  //  console.log(`[MARCAR PAGO] Tentando atualizar ID: ${pagamentoId}`);
 
     // Declara fora para usar em qualquer bloco
     let pagamento: any = null;
@@ -21,7 +21,7 @@ async marcarComoPago(req: Request, res: Response) {
 
     if (pagamento) {
       modalidade = 'futebol';
-      console.log(`[MARCAR PAGO] Encontrado em FUTEBOL - status atual: ${pagamento.status}`);
+    //  console.log(`[MARCAR PAGO] Encontrado em FUTEBOL - status atual: ${pagamento.status}`);
     }
 
     // 2. Se não encontrou, tenta em CrossFit
@@ -32,7 +32,7 @@ async marcarComoPago(req: Request, res: Response) {
 
       if (pagamento) {
         modalidade = 'crossfit';
-        console.log(`[MARCAR PAGO] Encontrado em CROSSFIT - status atual: ${pagamento.status}`);
+      //  console.log(`[MARCAR PAGO] Encontrado em CROSSFIT - status atual: ${pagamento.status}`);
       }
     }
 
@@ -55,7 +55,7 @@ async marcarComoPago(req: Request, res: Response) {
           metodoPagamento: metodo || 'DINHEIRO',
         },
       });
-      console.log(`[MARCAR PAGO] Atualizado FUTEBOL ID ${pagamentoId} para pago`);
+    //  console.log(`[MARCAR PAGO] Atualizado FUTEBOL ID ${pagamentoId} para pago`);
     } else if (modalidade === 'crossfit') {
       await prisma.mensalidadeCrossfit.update({
         where: { id: pagamentoId },
@@ -65,7 +65,7 @@ async marcarComoPago(req: Request, res: Response) {
           metodoPagamento: metodo || 'DINHEIRO',
         },
       });
-      console.log(`[MARCAR PAGO] Atualizado CROSSFIT ID ${pagamentoId} para pago`);
+    //  console.log(`[MARCAR PAGO] Atualizado CROSSFIT ID ${pagamentoId} para pago`);
     }
 
     return res.status(200).json({
@@ -74,7 +74,7 @@ async marcarComoPago(req: Request, res: Response) {
       data: { id: pagamentoId, status: 'pago' },
     });
   } catch (error) {
-    console.error('[MARCAR PAGO] Erro:', error);
+  //  console.error('[MARCAR PAGO] Erro:', error);
     return res.status(500).json({ error: 'Erro ao marcar pagamento como pago' });
   }
 }

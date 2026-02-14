@@ -93,7 +93,7 @@ export class EscolinhaService {
   }
 
   async buscarPorId(id: string) {
-    console.log("[Service] Buscando escolinha ID:", id);
+   // console.log("[Service] Buscando escolinha ID:", id);
 
     const escolinha = await prisma.escolinha.findUnique({
       where: { id },
@@ -134,7 +134,7 @@ export class EscolinhaService {
       throw new Error("Escolinha não encontrada");
     }
 
-    console.log("[Service] Escolinha encontrada:", escolinha.id);
+    //console.log("[Service] Escolinha encontrada:", escolinha.id);
     return escolinha;
   }
 
@@ -203,7 +203,7 @@ export class EscolinhaService {
       },
     });
 
-    console.log(`[SUSPENDER PAGAMENTO] Escolinha ${id} suspensa. Motivo: ${motivo || 'não informado'}`);
+  //  console.log(`[SUSPENDER PAGAMENTO] Escolinha ${id} suspensa. Motivo: ${motivo || 'não informado'}`);
     return atualizada;
   } catch (err: unknown) {
     console.error('[SUSPENDER PAGAMENTO ERROR]', err);

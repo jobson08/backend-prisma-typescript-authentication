@@ -333,8 +333,8 @@ async getAniversariantesSemana(escolinhaId: string, mes?: string): Promise<Anive
 
     return aniversariantes;
   } catch (err) {
-    console.error('[getAniversariantesSemana ERROR FULL]', err);
-    console.error('[STACK]', err.stack || 'Sem stack trace');
+    //console.error('[getAniversariantesSemana ERROR FULL]', err);
+    //console.error('[STACK]', err.stack || 'Sem stack trace');
     throw err;
   }
 }

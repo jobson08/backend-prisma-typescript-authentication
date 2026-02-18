@@ -335,8 +335,8 @@ model AulaExtra {
   alunoId String
   aluno   AlunoFutebol @relation(fields: [alunoId], references: [id])
 
-  treinadorId String?
-  treinador   Funcionario? @relation(fields: [treinadorId], references: [id])
+  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
+  funcionarioTreinadorId String
 
   escolinhaId String
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
@@ -366,8 +366,8 @@ model Treino {
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
   escolinhaId String
 
-  treinador   Funcionario @relation(fields: [treinadorId], references: [id])
-  treinadorId String
+  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
+  funcionarioTreinadorId String
 
   presencas Presenca[]
 }

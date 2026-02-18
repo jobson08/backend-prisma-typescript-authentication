@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
 
-import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario } from '../controllers/tenant/funcionario.controller';
+import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno } from '../controllers/tenant/aluno-futebol.controller';
@@ -12,6 +12,7 @@ import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-c
 import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
+import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController } from '../controllers/tenant/treinos-futebol.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -26,6 +27,7 @@ router.get('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard,
 router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
 router.put('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, updateFuncionario);
 router.delete('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, deleteFuncionario);
+router.get('/funcionarios-treinadores', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinadoresController);
 
 // Responsáveis (protegidos por ADMIN do tenant)
 router.get('/responsaveis', authMiddleware, roleGuard('ADMIN'), listResponsaveis);
@@ -51,8 +53,22 @@ router.patch('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAl
 router.put('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);
 router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteAlunoCrossfit);
 
+//treinios Dashboar 
+router.post('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, createTreinoFutebolController);
+router.get('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinosFutebolController);
+router.get('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getTreinoByIdController);
+router.put('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, editeTreinoFutebolController);
 
-//rota criar pagamentos
+// Rota dashboard 
+router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDashboardTenant);
+//rotas todos alunos inadiplentes
+router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAlunosInadimplentes);
+//rotas todos alunos aniversariantes-semana
+router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
+
+
+
+//ROTAS DE PAGAMENTO ALUNO FUTEBOL E CROSSFIT 
 //pagamentos Aluno futebol
 // POST /tenant/alunos/:alunoId/pagamentos
 router.post('/alunos/:alunoId/pagamentos',  
@@ -83,14 +99,10 @@ router.post(
   roleGuard('ADMIN'), // ou crie um middleware específico para cron
   pagamentosCrossfitController.generateAutomatic.bind(pagamentosCrossfitController)
 );
-// Rota dashboard 
-router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDashboardTenant);
 
-//rotas todos alunos inadiplentes
-router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAlunosInadimplentes);
 
-//rotas todos alunos aniversariantes-semana
-router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
+
+
 
 //pagamento aluno futebol e aluno crossfit 
 router.put(
@@ -99,6 +111,8 @@ router.put(
   roleGuard('ADMIN'),
   pagamentosController.marcarComoPago
 );
+
+
 
 
 // Criar ou editar login para QUALQUER entidade

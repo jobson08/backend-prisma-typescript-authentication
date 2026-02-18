@@ -130,3 +130,29 @@ export const deleteFuncionario = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message || 'Erro ao excluir funcionário' });
   }
 };
+
+//=======================================buscar treinador  por role ===========================
+export const listTreinadoresController = async (req: Request, res: Response) => {
+  try {
+    const treinadores = await prisma.funcionario.findMany({
+      where: {
+        escolinhaId: req.escolinhaId!,
+        cargo: 'TREINADOR',  // ou role: 'TREINADOR' se o campo for "role"
+      },
+      select: {
+        id: true,
+        nome: true,
+        cargo: true, // opcional, para mostrar no select
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    return res.json({
+      success: true,
+      data: treinadores,
+    });
+  } catch (err) {
+    console.error('[LIST TREINADORES ERROR]', err);
+    return res.status(500).json({ success: false, error: 'Erro ao listar treinadores' });
+  }
+};

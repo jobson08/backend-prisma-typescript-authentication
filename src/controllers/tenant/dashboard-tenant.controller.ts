@@ -30,7 +30,7 @@ export const getDashboardTenant = async (req: Request, res: Response) => {
       data: dashboard,
     });
   } catch (error: unknown) {
-  //  console.error('[getDashboardTenant] Erro:', error);
+    console.error('[getDashboardTenant] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno';
     return res.status(500).json({ error: message });
   }
@@ -57,7 +57,7 @@ export const getAlunosInadimplentes = async (req: Request, res: Response) => {
       data,
     });
   } catch (error: unknown) {
- //   console.error('[getAlunosInadimplentes] Erro:', error);
+    console.error('[getAlunosInadimplentes] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno';
     return res.status(500).json({ error: message });
   }

@@ -5,8 +5,8 @@ export class TreinosFutebolService {
 
  async createTreino(escolinhaId: string, dto: CreateTreinoDTO) {
   try {
-    console.log('[SERVICE CREATE TREINO] Dados recebidos:', dto);
-    console.log('[SERVICE] escolinhaId:', escolinhaId);
+  //  console.log('[SERVICE CREATE TREINO] Dados recebidos:', dto);
+   // console.log('[SERVICE] escolinhaId:', escolinhaId);
 
     const treino = await prisma.treino.create({
       data: {

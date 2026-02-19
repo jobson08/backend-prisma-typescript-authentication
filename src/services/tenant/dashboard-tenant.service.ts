@@ -273,8 +273,8 @@ async getAniversariantesSemana(escolinhaId: string, mes?: string): Promise<Anive
     const mesInicio = startOfMonth(baseDate);
     const mesEsperado = mesInicio.getMonth() + 2; // 1 = janeiro, 2 = fevereiro, ... 12 = dezembro
 
-    console.log(`[ANIVERSARIANTES] Filtrando mês inteiro: ${format(mesInicio, 'MMMM yyyy', { locale: ptBR })}`);
-    console.log(`[DEBUG] Mês esperado (1-based): ${mesEsperado} (raw getMonth: ${mesInicio.getMonth()})`);
+   // console.log(`[ANIVERSARIANTES] Filtrando mês inteiro: ${format(mesInicio, 'MMMM yyyy', { locale: ptBR })}`);
+   // console.log(`[DEBUG] Mês esperado (1-based): ${mesEsperado} (raw getMonth: ${mesInicio.getMonth()})`);
 
     const futebol = await prisma.alunoFutebol.findMany({
       where: { escolinhaId },
@@ -295,12 +295,12 @@ async getAniversariantesSemana(escolinhaId: string, mes?: string): Promise<Anive
 
       const passa = mesNasc === mesEsperado;
 
-      console.log('[DEBUG ALUNO]', {
+     /* console.log('[DEBUG ALUNO]', {
         dataBruta: dataNasc.toISOString(),
         mesNasc,
         mesEsperado,
         passa
-      });
+      });*/
 
       return passa;
     };

@@ -12,7 +12,7 @@ import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-c
 import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
-import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController } from '../controllers/tenant/treinos-futebol.controller';
+import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController } from '../controllers/tenant/treinos-futebol.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -58,6 +58,7 @@ router.post('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard,
 router.get('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinosFutebolController);
 router.get('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getTreinoByIdController);
 router.put('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, editeTreinoFutebolController);
+router.get('/proximas-aulas-semana',authMiddleware, roleGuard('ADMIN'),tenantGuard,getProximasAulasSemanaController);
 
 // Rota dashboard 
 router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDashboardTenant);

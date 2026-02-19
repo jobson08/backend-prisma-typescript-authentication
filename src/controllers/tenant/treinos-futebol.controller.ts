@@ -143,3 +143,54 @@ export const editeTreinoFutebolController = async (req: Request, res: Response) 
   res.json({ success: true, data: treino });
 }
 
+export const getProximasAulasSemanaController = async (req: Request, res: Response) => {
+  try {
+    const hoje = new Date();
+    const diaDaSemana = hoje.getDay(); // 0 = domingo, 1 = segunda...
+
+    // Segunda-feira (início da semana)
+    const segunda = new Date(hoje);
+    segunda.setDate(hoje.getDate() - (diaDaSemana === 0 ? 6 : diaDaSemana - 1));
+    segunda.setHours(0, 0, 0, 0);
+
+    // Domingo (fim da semana)
+    const domingo = new Date(segunda);
+    domingo.setDate(segunda.getDate() + 6);
+    domingo.setHours(23, 59, 59, 999);
+
+    const treinos = await prisma.treino.findMany({
+      where: {
+        escolinhaId: req.escolinhaId!,
+        data: {
+          gte: segunda,
+          lte: domingo,
+        },
+      },
+      include: {
+        funcionarioTreinador: { select: { nome: true } },
+      },
+      orderBy: [
+        { data: 'asc' },
+        { horaInicio: 'asc' },
+      ],
+    });
+
+    // Formata data como string (evita problemas no frontend)
+    const formatados = treinos.map(t => ({
+      ...t,
+      data: t.data.toISOString().split('T')[0],
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formatados,
+      total: formatados.length,
+    });
+  } catch (err: any) {
+    console.error('[PROXIMAS AULAS SEMANA ERROR]', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar próximas aulas da semana',
+    });
+  }
+};

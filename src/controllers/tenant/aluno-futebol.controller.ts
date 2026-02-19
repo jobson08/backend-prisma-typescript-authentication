@@ -17,7 +17,7 @@ function gerarSenhaAleatoria(tamanho = 10) {
 }
 
 export const createAluno = async (req: Request, res: Response) => {
-  console.log("Body recebido:", req.body);
+ // console.log("Body recebido:", req.body);
   try {
     const escolinhaId = req.escolinhaId!; // vem do middleware de autenticação
     const body = createAlunoFutebolSchema.parse(req.body);

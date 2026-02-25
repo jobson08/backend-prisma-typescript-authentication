@@ -3,7 +3,7 @@ import { z } from 'zod';
 // --------------------------------------------------
 // DTO de CRIAÇÃO (POST)
 // Todos os campos obrigatórios (exceto os opcionais do schema)
-export const CreateAlunoCrossfitDTO = z.object({
+export const createAlunoCrossfitSchema= z.object({
   nome: z.string()
     .min(3, 'Nome completo é obrigatório')
     .max(100, 'Nome muito longo (máx 100 caracteres)'),
@@ -34,14 +34,19 @@ export const CreateAlunoCrossfitDTO = z.object({
     .max(7, 'Frequência máxima é 7')
     .default(0),
 
-  status: z.enum(['ativo', 'inativo', 'trancado'])
-    .default('ativo'),
+  status: z.enum(["ATIVO", "INATIVO", "TRANCADO"])
+    .default('ATIVO'),
+    
+    // Opcional: password se quiser permitir envio manual
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional(),  
 });
 
 // --------------------------------------------------
 // DTO de ATUALIZAÇÃO (PUT/PATCH)
 // Todos os campos opcionais
-export const UpdateAlunoCrossfitDTO = CreateAlunoCrossfitDTO.partial();
+export const updateAlunoCrossfitSchema = createAlunoCrossfitSchema.partial().extend({
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional(),
+});
 
 // --------------------------------------------------
 // DTO de RESPOSTA (o que o backend retorna)
@@ -55,7 +60,7 @@ export const AlunoCrossfitResponseDTO = z.object({
   dataNascimento: z.date(),
   observacoes: z.string().nullable(),
   frequencia: z.number().int(),
-  status: z.enum(['ativo', 'inativo', 'trancado']),
+  status: z.enum(["ATIVO", "INATIVO", "TRANCADO"]),
   createdAt: z.date(),
 
   escolinhaId: z.string().uuid(),
@@ -70,6 +75,6 @@ export const AlunoCrossfitResponseDTO = z.object({
 });
 
 // Tipos inferidos para uso no código
-export type CreateAlunoCrossfitDTO = z.infer<typeof CreateAlunoCrossfitDTO>;
-export type UpdateAlunoCrossfitDTO = z.infer<typeof UpdateAlunoCrossfitDTO>;
+export type CreateAlunoCrossfitDto = z.infer<typeof createAlunoCrossfitSchema>;
+export type UpdateAlunoCrossfitDto = z.infer<typeof updateAlunoCrossfitSchema>;
 export type AlunoCrossfitResponseDTO = z.infer<typeof AlunoCrossfitResponseDTO>;

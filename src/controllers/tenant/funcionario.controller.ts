@@ -1,57 +1,24 @@
 import { Request, Response } from 'express';
-import { FuncionarioService } from '../../services/superadmin/funcionario.service';
-import { createFuncionarioSchema, updateFuncionarioSchema } from '../../dto/tenant/funcionario.dto';
+
+import { createFuncionarioSchema, updateFuncionarioSchema,} from '../../dto/tenant/funcionario.dto';
 import { z } from 'zod';
-import { prisma } from '../../server';
+import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
+import { FuncionarioService } from '../../services/tenant/funcionario.service';
 
 const service = new FuncionarioService();
+
 //======================================criar funcionario=================================
 export const createFuncionario = async (req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;
     const data = createFuncionarioSchema.parse(req.body);
 
-    // Normaliza o email para minúsculo (evita duplicidade)
-    data.email = data.email.toLowerCase();
-
-    // Verifica se já existe (agora com email minúsculo)
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ error: "E-mail já cadastrado" });
-    }
-
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    const user = await prisma.user.create({
-      data: {
-        email: data.email, // já está em minúsculo
-        password: hashedPassword,
-        name: data.nome,
-        role: 'FUNCIONARIO',
-        escolinhaId,
-      },
-    });
-
-    // Cria o Funcionário vinculado
-    const funcionario = await prisma.funcionario.create({
-      data: {
-        nome: data.nome,
-        cargo: data.cargo,
-        salario: data.salario,
-        telefone: data.telefone,
-        email: data.email,
-        observacoes: data.observacoes,
-        escolinhaId,
-        userId: user.id, // vincula o login
-      },
-    });
+    const funcionario = await service.create(escolinhaId, data);
 
     res.status(201).json({
       success: true,
-      message: 'Funcionário e login criados com sucesso',
+      message: 'Funcionário criado com sucesso',
       data: funcionario,
     });
   } catch (error) {
@@ -62,9 +29,10 @@ export const createFuncionario = async (req: Request, res: Response) => {
       });
     }
     console.error('[CreateFuncionario] Erro:', error);
-    res.status(500).json({ error: 'Erro interno ao criar funcionário' });
+    res.status(500).json({ error: 'Erro ao criar funcionário' });
   }
 };
+
 //====================================Lista todos funcionario============================
 export const listFuncionarios = async (req: Request, res: Response) => {
   try {
@@ -76,6 +44,7 @@ export const listFuncionarios = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao listar funcionários' });
   }
 };
+
 //===============================Busacr funcionario po ID======================================
 export const getFuncionarioById = async (req: Request, res: Response) => {
   try {
@@ -91,6 +60,7 @@ export const getFuncionarioById = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao buscar funcionário' });
   }
 };
+
 //=================================Editar funcionario===========================
 export const updateFuncionario = async (req: Request, res: Response) => {
   try {
@@ -116,6 +86,40 @@ export const updateFuncionario = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao atualizar funcionário' });
   }
 };
+
+//=======================================Redefinir senha===============================
+export const redefinirSenhaFuncionario = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const funcionario = await prisma.funcionario.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!funcionario || !funcionario.user) {
+      return res.status(400).json({ success: false, error: 'Funcionário ou login não encontrado' });
+    }
+
+    const senhaTemporaria = Math.random().toString(36).slice(-12) + '!@#';
+
+    const hashed = await bcrypt.hash(senhaTemporaria, 10);
+
+    await prisma.user.update({
+      where: { id: funcionario.user.id },
+      data: { password: hashed },
+    });
+
+    res.json({
+      success: true,
+      message: 'Senha redefinida com sucesso',
+      senhaTemporaria,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erro ao redefinir senha' });
+  }
+};
+
 //=====================================excluir funcionario=============================
 export const deleteFuncionario = async (req: Request, res: Response) => {
   try {
@@ -131,18 +135,19 @@ export const deleteFuncionario = async (req: Request, res: Response) => {
   }
 };
 
+
 //=======================================buscar treinador  por role ===========================
 export const listTreinadoresController = async (req: Request, res: Response) => {
   try {
     const treinadores = await prisma.funcionario.findMany({
       where: {
         escolinhaId: req.escolinhaId!,
-        cargo: 'TREINADOR',  // ou role: 'TREINADOR' se o campo for "role"
+        cargo: 'TREINADOR',
       },
       select: {
         id: true,
         nome: true,
-        cargo: true, // opcional, para mostrar no select
+        cargo: true,
       },
       orderBy: { nome: 'asc' },
     });
@@ -152,7 +157,7 @@ export const listTreinadoresController = async (req: Request, res: Response) => 
       data: treinadores,
     });
   } catch (err) {
-    console.error('[LIST TREINADORES ERROR]', err);
+    console.error('[LIST_TREINADORES_ERROR]', err);
     return res.status(500).json({ success: false, error: 'Erro ao listar treinadores' });
   }
 };

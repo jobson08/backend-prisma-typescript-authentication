@@ -3,16 +3,16 @@ import { Router } from 'express';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
 
-import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController } from '../controllers/tenant/funcionario.controller';
+import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel } from '../controllers/tenant/responsavel.controller';
-import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno } from '../controllers/tenant/aluno-futebol.controller';
-import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
+import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
+import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
 import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-crossfit.controller';
 import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
-import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController } from '../controllers/tenant/treinos-futebol.controller';
+import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController} from '../controllers/tenant/treinos-futebol.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -24,9 +24,9 @@ router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
 router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
 router.get('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, listFuncionarios);
 router.get('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getFuncionarioById);
-router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
 router.put('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, updateFuncionario);
 router.delete('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, deleteFuncionario);
+router.post('/funcionarios/:id/redefinir-senha', authMiddleware, roleGuard('ADMIN'), tenantGuard, redefinirSenhaFuncionario);
 router.get('/funcionarios-treinadores', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinadoresController);
 
 // Responsáveis (protegidos por ADMIN do tenant)
@@ -44,6 +44,7 @@ router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
 router.get('/alunos/:id', authMiddleware, roleGuard('ADMIN'), getAlunoById);
 router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);
+router.post('/alunos/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaAluno);
 
 // aluno crossfit (protegidos por ADMIN do tenant)
 router.post('/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), createAlunoCrossfit);
@@ -52,6 +53,8 @@ router.get('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), getAlunoCr
 router.patch('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);
 router.put('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);
 router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteAlunoCrossfit);
+router.post('/alunos-crossfit/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaAlunoCrossfit);
+
 
 //treinios Dashboar 
 router.post('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, createTreinoFutebolController);

@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 
 import { z } from 'zod';
 import { prisma } from '../../config/database';
+import { endOfMonth, startOfDay, startOfMonth } from 'date-fns';
 
 // Schema para criação manual
 const createManualMensalidadeSchema = z.object({
@@ -33,10 +34,11 @@ export class PagamentosCrossfitController {
       }
 
       // Verifica se já existe mensalidade para esse mês (evita duplicata)
-      const mesInicio = new Date(body.mesReferencia);
-      const mesFim = new Date(mesInicio);
-      mesFim.setMonth(mesFim.getMonth() + 1);
-
+      const mesInicio = new Date(body.mesReferencia + 'T00:00:00Z');
+      const mesFim =  startOfMonth(mesInicio);
+      //mesFim.setMonth(mesFim.getMonth() + 1);
+       const dataVencimentoParaSalvar = startOfDay(new Date(body.dataVencimento + 'T00:00:00'));
+       
       const existente = await prisma.mensalidadeCrossfit.findFirst({
         where: {
           clienteId: alunoId,
@@ -57,7 +59,7 @@ export class PagamentosCrossfitController {
           escolinhaId,
           mesReferencia: mesInicio,
           valor: body.valor,
-          dataVencimento: new Date(body.dataVencimento),
+          dataVencimento: dataVencimentoParaSalvar,
           status: 'pendente',
           metodoPagamento: null,
           observacao: body.observacao,

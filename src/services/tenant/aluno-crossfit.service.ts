@@ -1,79 +1,81 @@
 // src/services/tenant/aluno-crossfit.service.ts
 import bcrypt from 'bcrypt';
 import { prisma } from '../../server';
-import { CreateAlunoCrossfitDTO, UpdateAlunoCrossfitDTO } from '../../dto/tenant/aluno-crossfit.dto';
+import { CreateAlunoCrossfitDto, UpdateAlunoCrossfitDto } from '../../dto/tenant/aluno-crossfit.dto';
 
 
 export class AlunoCrossfitService {
-  async create(escolinhaId: string, data: CreateAlunoCrossfitDTO) {
-    // Conversão de dataNascimento
-    let dataNascimento: Date;
-    if (data.dataNascimento.includes('/')) {
-      const [day, month, year] = data.dataNascimento.split('/');
-      dataNascimento = new Date(`${year}-${month}-${day}`);
-    } else {
-      dataNascimento = new Date(data.dataNascimento);
-    }
+ async create(escolinhaId: string, data: CreateAlunoCrossfitDto) {
+    console.log('[SERVICE CREATE ALUNO CROSSFIT] Dados recebidos:', JSON.stringify(data, null, 2));
+    console.log('[SERVICE CREATE ALUNO CROSSFIT] escolinhaId:', escolinhaId);
 
-    if (isNaN(dataNascimento.getTime())) {
-      throw new Error('Data de nascimento inválida');
-    }
+    const emailLower = data.email.toLowerCase().trim();
 
-    // Verifica unicidade de email e CPF (dentro da escolinha)
-    const existing = await prisma.alunoCrossfit.findFirst({
-      where: {
-        OR: [
-          { email: data.email.toLowerCase().trim() },
-          ...(data.cpf ? [{ cpf: data.cpf.replace(/\D/g, '') }] : []),
-        ],
-        escolinhaId,
-      },
+    // Verifica duplicidade de email
+    const existingUser = await prisma.user.findUnique({
+      where: { email: emailLower },
     });
 
-    if (existing) {
-      throw new Error('E-mail ou CPF já cadastrado nesta escolinha');
+    if (existingUser) {
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] Email duplicado encontrado');
+      throw new Error('E-mail já cadastrado');
     }
 
-    // Cria o aluno
-    const aluno = await prisma.alunoCrossfit.create({
-      data: {
-        nome: data.nome.trim(),
-        cpf: data.cpf ? data.cpf.replace(/\D/g, '') : null,
-        email: data.email.toLowerCase().trim(),
-        telefone: data.telefone ? data.telefone.replace(/\D/g, '') : null,
-        dataNascimento,
-        observacoes: data.observacoes?.trim() || null,
-        frequencia: data.frequencia ?? 0,
-        status: data.status ?? 'ativo',
-        escolinhaId,
-      },
-    });
-
-    // Gera senha temporária e cria usuário associado
-    const senhaTemporaria = Math.random().toString(36).slice(-8);
+    // Gera senha temporária (automática se não vier no payload)
+    const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
     const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email.toLowerCase().trim(),
-        name: data.nome.trim(),
-        password: hashedPassword,
-        role: 'ALUNO_CROSSFIT',
-        escolinhaId,
-      },
+    console.log('[SERVICE CREATE ALUNO CROSSFIT] Senha temporária gerada');
+
+    const result = await prisma.$transaction(async (tx) => {
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] Criando User...');
+
+      const user = await tx.user.create({
+        data: {
+          email: emailLower,
+          password: hashedPassword,
+          name: data.nome,
+          role: 'ALUNO_CROSSFIT',  // role específico
+          escolinha: { connect: { id: escolinhaId } },
+        },
+      });
+
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] User criado - ID:', user.id);
+
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] Criando AlunoCrossfit...');
+
+      const aluno = await tx.alunoCrossfit.create({
+        data: {
+          nome: data.nome,
+          dataNascimento: new Date(data.dataNascimento.split('/').reverse().join('-')),
+          telefone: data.telefone,
+          cpf: data.cpf,
+         // nivel: data.nivel,  // campo específico do crossfit
+          email: emailLower,
+          status: 'ATIVO',
+          observacoes: data.observacoes,
+          escolinhaId,
+          userId: user.id,  // Vincula aluno → user
+        },
+      });
+
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] Aluno criado - ID:', aluno.id);
+
+      // Completa a relação bidirecional
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          alunoCrossfitId: aluno.id,
+        },
+      });
+
+      console.log('[SERVICE CREATE ALUNO CROSSFIT] Relação bidirecional completa: alunoCrossfitId atualizado no User');
+
+      return { aluno, senhaTemporaria };
     });
 
-    // Associa o user ao aluno
-    await prisma.alunoCrossfit.update({
-      where: { id: aluno.id },
-      data: { userId: user.id },
-    });
-
-    // Retorna aluno + senha temporária
-    return {
-      ...aluno,
-      senhaTemporaria,
-    };
+    console.log('[SERVICE CREATE ALUNO CROSSFIT] Criação concluída com sucesso');
+    return result;
   }
 
   async list(escolinhaId: string) {
@@ -125,62 +127,109 @@ export class AlunoCrossfitService {
     return aluno;
   }
 
-  async update(escolinhaId: string, id: string, data: UpdateAlunoCrossfitDTO) {
-    const aluno = await prisma.alunoCrossfit.findFirst({
-      where: {
-        id,
-        escolinhaId,
-      },
-    });
+  async update(escolinhaId: string, id: string, data: UpdateAlunoCrossfitDto) {
+  console.log('[SERVICE UPDATE ALUNO CROSSFIT] Iniciando atualização - ID:', id);
+  console.log('[SERVICE UPDATE ALUNO CROSSFIT] Dados recebidos:', JSON.stringify(data, null, 2));
 
-    if (!aluno) {
-      throw new Error('Aluno de CrossFit não encontrado');
-    }
+  // Busca aluno com user incluído (para verificar login)
+  const aluno = await prisma.alunoCrossfit.findFirst({
+    where: { id, escolinhaId },
+    include: { user: true },
+  });
 
-    // Se alterar email ou CPF, verifica unicidade
-    if (data.email || data.cpf) {
-      const existing = await prisma.alunoCrossfit.findFirst({
-        where: {
-          OR: [
-            ...(data.email ? [{ email: data.email.toLowerCase().trim() }] : []),
-            ...(data.cpf ? [{ cpf: data.cpf.replace(/\D/g, '') }] : []),
-          ],
-          escolinhaId,
-          id: { not: id },
-        },
-      });
-
-      if (existing) {
-        throw new Error('E-mail ou CPF já cadastrado nesta escolinha');
-      }
-    }
-
-    // Atualiza apenas os campos enviados
-    const updated = await prisma.alunoCrossfit.update({
-      where: { id },
-      data: {
-        nome: data.nome,
-        cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
-        email: data.email ? data.email.toLowerCase().trim() : undefined,
-        telefone: data.telefone ? data.telefone.replace(/\D/g, '') : undefined,
-        dataNascimento: data.dataNascimento ? new Date(data.dataNascimento) : undefined,
-        observacoes: data.observacoes,
-        frequencia: data.frequencia,
-        status: data.status,
-      },
-    });
-
-    // Se mudou o e-mail, atualiza o user também
-    if (data.email && data.email.toLowerCase().trim() !== aluno.email) {
-      await prisma.user.update({
-        where: { id: aluno.userId! },
-        data: { email: data.email.toLowerCase().trim() },
-      });
-    }
-
-    return updated;
+  if (!aluno) {
+    throw new Error('Aluno de CrossFit não encontrado ou não pertence à escolinha');
   }
 
+
+
+  // Se alterar email ou CPF, verifica unicidade em AlunoCrossfit
+  if (data.email || data.cpf) {
+    const existingAluno = await prisma.alunoCrossfit.findFirst({
+      where: {
+        OR: [
+          ...(data.email ? [{ email: data.email.toLowerCase().trim() }] : []),
+          ...(data.cpf ? [{ cpf: data.cpf.replace(/\D/g, '') }] : []),
+        ],
+        escolinhaId,
+        id: { not: id },
+      },
+    });
+
+    if (existingAluno) {
+      throw new Error('E-mail ou CPF já cadastrado nesta escolinha');
+    }
+  }
+
+  // Prepara dados para atualizar AlunoCrossfit
+  const updateAlunoData: any = {};
+
+  if (data.nome !== undefined) updateAlunoData.nome = data.nome.trim();
+  if (data.dataNascimento !== undefined) {
+    const date = new Date(data.dataNascimento);
+    if (isNaN(date.getTime())) throw new Error('Data de nascimento inválida');
+    updateAlunoData.dataNascimento = date;
+  }
+  if (data.telefone !== undefined) updateAlunoData.telefone = data.telefone.replace(/\D/g, '') || null;
+  if (data.cpf !== undefined) updateAlunoData.cpf = data.cpf.replace(/\D/g, '') || null;
+  if (data.observacoes !== undefined) updateAlunoData.observacoes = data.observacoes.trim() || null;
+  if (data.status !== undefined) updateAlunoData.status = data.status;
+
+  // Atualização do email (aluno + user)
+  let emailAtualizado = false;
+  if (data.email && data.email.toLowerCase().trim() !== aluno.email) {
+    const emailLower = data.email.toLowerCase().trim();
+
+    // Verifica duplicidade no User (mais importante)
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: emailLower,
+        id: { not: aluno.userId! },
+      },
+    });
+
+    if (existingUser) {
+      throw new Error('E-mail já em uso por outro usuário');
+    }
+
+    updateAlunoData.email = emailLower;
+    emailAtualizado = true;
+  }
+
+  // Atualização da senha (se enviada)
+  let senhaAtualizada = false;
+   if (data.password && aluno.userId) {
+   
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    await prisma.user.update({
+      where: { id: aluno.userId },
+      data: { password: hashedPassword },
+    });
+
+    senhaAtualizada = true;
+    console.log('[SERVICE UPDATE ALUNO CROSSFIT] Senha atualizada no User ID:', aluno.userId);
+  }
+
+  // Atualiza o aluno
+  const alunoAtualizado = await prisma.alunoCrossfit.update({
+    where: { id },
+    data: updateAlunoData,
+  });
+
+  // Se mudou email, atualiza também no User
+  if (emailAtualizado && aluno.userId) {
+    await prisma.user.update({
+      where: { id: aluno.userId },
+      data: { email: data.email!.toLowerCase().trim() },
+    });
+    console.log('[SERVICE UPDATE ALUNO CROSSFIT] E-mail atualizado no User:', data.email);
+  }
+
+  console.log('[SERVICE UPDATE ALUNO CROSSFIT] Aluno atualizado com sucesso - ID:', id);
+
+  return alunoAtualizado;
+}
   async delete(escolinhaId: string, id: string) {
     const aluno = await prisma.alunoCrossfit.findFirst({
       where: {

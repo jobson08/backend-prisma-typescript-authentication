@@ -231,8 +231,7 @@ model AlunoFutebol {
   aulaExtras    AulaExtra[]
 
   userId String? @unique
-
-  user User?
+  user   User?
 }
 
 // ==================== ALUNO CROSSFIT ====================

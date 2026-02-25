@@ -8,6 +8,7 @@ export const createResponsavelSchema = z.object({
   email: z.string().email('E-mail inválido'),
   telefone: z.string().min(10, 'Telefone inválido').optional(),
   observacoes: z.string().optional(),
+  fotoUrl: z.string().url("URL da foto inválida").optional(),
   // Campos para login opcional (se email for fornecido, cria User)
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional(),
 });
@@ -18,6 +19,7 @@ export const updateResponsavelSchema = z.object({
   email: z.string().email('E-mail inválido'),
   telefone: z.string().min(10, 'Telefone inválido').optional(),
   observacoes: z.string().optional(),
+  fotoUrl: z.string().url("URL da foto inválida").optional(),
   // Campos para login opcional (se email for fornecido, cria User)
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional(),
 }); 

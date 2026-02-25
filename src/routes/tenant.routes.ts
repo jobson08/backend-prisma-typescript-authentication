@@ -5,7 +5,7 @@ import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que
 
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
-import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel } from '../controllers/tenant/responsavel.controller';
+import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel, redefinirSenhaResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
 import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
 import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-crossfit.controller';
@@ -36,7 +36,7 @@ router.post('/responsaveis', authMiddleware, roleGuard('ADMIN'), createResponsav
 router.put('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
-
+router.post('/responsaveis/:id/redefinir-senha',authMiddleware,roleGuard('ADMIN'),tenantGuard,redefinirSenhaResponsavel);
 // Alunos (protegidos por ADMIN do tenant)
 router.post('/alunos', authMiddleware, roleGuard('ADMIN'), createAluno);
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);

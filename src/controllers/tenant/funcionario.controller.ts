@@ -10,26 +10,35 @@ const service = new FuncionarioService();
 
 //======================================criar funcionario=================================
 export const createFuncionario = async (req: Request, res: Response) => {
+  console.log('[CONTROLLER CREATE FUNCIONARIO] Iniciando criação');
+  console.log('[CONTROLLER CREATE FUNCIONARIO] Body recebido:', JSON.stringify(req.body, null, 2));
+
   try {
     const escolinhaId = req.escolinhaId!;
     const data = createFuncionarioSchema.parse(req.body);
 
-    const funcionario = await service.create(escolinhaId, data);
+    console.log('[CONTROLLER CREATE FUNCIONARIO] Dados validados:', JSON.stringify(data, null, 2));
+
+    const result = await service.create(escolinhaId, data);
+
+    console.log('[CONTROLLER CREATE FUNCIONARIO] Resultado:', JSON.stringify(result, null, 2));
 
     res.status(201).json({
       success: true,
       message: 'Funcionário criado com sucesso',
-      data: funcionario,
+      data: result.funcionario,
+      senhaTemporaria: result.senhaTemporaria,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         error: 'Dados inválidos',
         details: error.issues,
       });
     }
-    console.error('[CreateFuncionario] Erro:', error);
-    res.status(500).json({ error: 'Erro ao criar funcionário' });
+
+    console.error('[CREATE FUNCIONARIO] Erro:', error);
+    res.status(500).json({ error: 'Erro interno ao criar funcionário' });
   }
 };
 
@@ -63,27 +72,43 @@ export const getFuncionarioById = async (req: Request, res: Response) => {
 
 //=================================Editar funcionario===========================
 export const updateFuncionario = async (req: Request, res: Response) => {
+  console.log('[CONTROLLER UPDATE FUNCIONARIO] Iniciando atualização');
+  console.log('[CONTROLLER UPDATE FUNCIONARIO] ID do funcionário:', req.params.id);
+  console.log('[CONTROLLER UPDATE FUNCIONARIO] Body recebido:', JSON.stringify(req.body, null, 2));
+
   try {
     const escolinhaId = req.escolinhaId!;
     const { id } = req.params;
+
     const data = updateFuncionarioSchema.parse(req.body);
 
-    const funcionario = await service.update(escolinhaId, id, data);
+    console.log('[CONTROLLER UPDATE FUNCIONARIO] Dados validados pelo Zod:', JSON.stringify(data, null, 2));
+
+    const funcionarioAtualizado = await service.update(escolinhaId, id, data);
+
+    console.log('[CONTROLLER UPDATE FUNCIONARIO] Funcionário atualizado com sucesso - ID:', id);
 
     res.json({
       success: true,
       message: 'Funcionário atualizado com sucesso',
-      data: funcionario,
+      data: funcionarioAtualizado,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
+      console.error('[UPDATE FUNCIONARIO] Erro Zod:', error.issues);
       return res.status(400).json({
         error: 'Dados inválidos',
-        details: error.issues,
+        details: error.issues.map(issue => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+          code: issue.code,
+        })),
       });
     }
-    console.error('[UpdateFuncionario] Erro:', error);
-    res.status(500).json({ error: 'Erro ao atualizar funcionário' });
+
+    const message = error instanceof Error ? error.message : 'Erro interno ao atualizar funcionário';
+    console.error('[UPDATE FUNCIONARIO] Erro completo:', message, error);
+    res.status(500).json({ error: message });
   }
 };
 
@@ -92,17 +117,29 @@ export const redefinirSenhaFuncionario = async (req: Request, res: Response) => 
   try {
     const { id } = req.params;
 
+    console.log('[REDEFINIR SENHA FUNCIONARIO] Iniciando - ID:', id);
+
     const funcionario = await prisma.funcionario.findUnique({
       where: { id },
       include: { user: true },
     });
 
-    if (!funcionario || !funcionario.user) {
-      return res.status(400).json({ success: false, error: 'Funcionário ou login não encontrado' });
+    console.log('[REDEFINIR SENHA FUNCIONARIO] Funcionário encontrado:', funcionario ? 'sim' : 'não');
+    console.log('[REDEFINIR SENHA FUNCIONARIO] User vinculado:', funcionario?.user ? 'sim (ID: ' + funcionario.user.id + ')' : 'não');
+
+    if (!funcionario) {
+      return res.status(404).json({ success: false, error: 'Funcionário não encontrado' });
     }
 
-    const senhaTemporaria = Math.random().toString(36).slice(-12) + '!@#';
+    if (!funcionario.user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este funcionário não possui login associado',
+      });
+    }
 
+    // Gera nova senha temporária
+    const senhaTemporaria = Math.random().toString(36).slice(-12) + '!@#';
     const hashed = await bcrypt.hash(senhaTemporaria, 10);
 
     await prisma.user.update({
@@ -110,13 +147,19 @@ export const redefinirSenhaFuncionario = async (req: Request, res: Response) => 
       data: { password: hashed },
     });
 
-    res.json({
+    console.log('[REDEFINIR SENHA FUNCIONARIO] Senha redefinida com sucesso para user ID:', funcionario.user.id);
+
+    return res.json({
       success: true,
       message: 'Senha redefinida com sucesso',
       senhaTemporaria,
     });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erro ao redefinir senha' });
+  } catch (err: any) {
+    console.error('[REDEFINIR SENHA FUNCIONARIO] Erro completo:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Erro ao redefinir senha',
+    });
   }
 };
 
@@ -134,7 +177,6 @@ export const deleteFuncionario = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message || 'Erro ao excluir funcionário' });
   }
 };
-
 
 //=======================================buscar treinador  por role ===========================
 export const listTreinadoresController = async (req: Request, res: Response) => {

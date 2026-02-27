@@ -14,72 +14,73 @@ const createManualMensalidadeFutebolSchema = z.object({
 
 export class PagamentosFutebolController {
   // GERAÇÃO MANUAL (administrador cria uma mensalidade específica)
-async createManual(req: Request, res: Response) {
-  try {
-    const { alunoId } = req.params;
-    const escolinhaId = req.escolinhaId!;
-    const body = createManualMensalidadeFutebolSchema.parse(req.body);
+ async createManual(req: Request, res: Response) {
+    try {
+      const { alunoId } = req.params;
+      const escolinhaId = req.escolinhaId!;
+      const body = createManualMensalidadeFutebolSchema.parse(req.body);
 
-    const aluno = await prisma.alunoFutebol.findFirst({
-      where: { id: alunoId, escolinhaId },
-    });
-
-    if (!aluno) {
-      return res.status(404).json({ error: 'Aluno não encontrado' });
-    }
-
-    // Use startOfMonth e startOfDay com data local explícita
-    const mesInicio = new Date(body.mesReferencia + 'T00:00:00Z'); // força local
-    const mesReferenciaParaSalvar = startOfMonth(mesInicio);
-
-    const dataVencimentoParaSalvar = startOfDay(new Date(body.dataVencimento + 'T00:00:00')); // força início do dia local
-
-    const mesFim = endOfMonth(mesInicio);
-
-    const existente = await prisma.mensalidadeFutebol.findFirst({
-      where: {
-        alunoId,
-        mesReferencia: {
-          gte: mesReferenciaParaSalvar,
-          lt: mesFim,
+      // Verifica se aluno existe e pertence à escolinha
+      const aluno = await prisma.alunoFutebol.findFirst({
+        where: {
+          id: alunoId,
+          escolinhaId,
         },
-      },
-    });
-
-    if (existente) {
-      return res.status(409).json({ error: 'Já existe mensalidade para este mês' });
-    }
-
-    const mensalidade = await prisma.mensalidadeFutebol.create({
-      data: {
-        alunoId,
-        escolinhaId,
-        mesReferencia: mesReferenciaParaSalvar,
-        valor: body.valor,
-        dataVencimento: dataVencimentoParaSalvar,
-        status: 'pendente',
-        metodoPagamento: null,
-        observacao: body.observacao,
-      },
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Mensalidade manual criada com sucesso',
-      data: mensalidade,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues,
       });
-    }
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao criar mensalidade manual' });
-  }
-}
 
+      if (!aluno) {
+        return res.status(404).json({ error: 'Aluno não encontrado' });
+      }
+
+      // Verifica se já existe mensalidade para esse mês (evita duplicata)
+      const mesInicio = new Date(body.mesReferencia + 'T00:00:00Z');
+      const mesFim =  startOfMonth(mesInicio);
+      //mesFim.setMonth(mesFim.getMonth() + 1);
+       const dataVencimentoParaSalvar = startOfDay(new Date(body.dataVencimento + 'T00:00:00'));
+       
+      const existente = await prisma.mensalidadeFutebol.findFirst({
+        where: {
+          alunoId,
+          mesReferencia: {
+            gte: mesInicio,
+            lt: mesFim,
+          },
+        },
+      });
+
+      if (existente) {
+        return res.status(409).json({ error: 'Já existe mensalidade para este mês' });
+      }
+
+      const mensalidade = await prisma.mensalidadeFutebol.create({
+        data: {
+          alunoId,
+          escolinhaId,
+          mesReferencia: mesInicio,
+          valor: body.valor,
+          dataVencimento: dataVencimentoParaSalvar,
+          status: 'pendente',
+          metodoPagamento: null,
+          observacao: body.observacao,
+        },
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Mensalidade manual criada com sucesso',
+        data: mensalidade,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: 'Dados inválidos',
+          details: error.issues,
+        });
+      }
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao criar mensalidade manual' });
+    }
+  }
   // GERAÇÃO AUTOMÁTICA (chamada por cron job)
   async generateAutomatic(req: Request, res: Response) {
     try {

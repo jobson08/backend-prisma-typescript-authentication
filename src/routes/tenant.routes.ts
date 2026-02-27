@@ -75,10 +75,7 @@ router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAni
 //ROTAS DE PAGAMENTO ALUNO FUTEBOL E CROSSFIT 
 //pagamentos Aluno futebol
 // POST /tenant/alunos/:alunoId/pagamentos
-router.post('/alunos/:alunoId/pagamentos',  
-  authMiddleware, 
-  roleGuard('ADMIN'),
-  pagamentosFutebolController.createManual);
+router.post('/alunos/:alunoId/pagamentos',  authMiddleware,  roleGuard('ADMIN'), pagamentosFutebolController.createManual);
 
 // Cron (pode ser protegida ou pública, dependendo da segurança)
 router.post('/pagamentos-futebol/generate-automatic',  

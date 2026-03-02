@@ -1,125 +1,235 @@
-// src/services/pagamento-futebol.service.ts
-
+// src/services/tenant/pagamentos-futebol.service.ts
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { prisma } from '../../config/database';
-import { addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfDay } from 'date-fns';
 
-export class PagamentoFutebolService {
-  /*async createManual(input: CreateMensalidadeFutebolManualInput): Promise<MensalidadeFutebolResponse> {
-    const { alunoId, mesReferencia, dataVencimento, valor, observacao, gerarProximo } = input;
+export class PagamentosFutebolService {
+  /**
+   * Cria uma mensalidade manual para um aluno específico
+   */
+  async createManual(alunoId: string, escolinhaId: string, data: any) {
+    // Validação extra (se necessário)
+    const mesInicio = startOfMonth(new Date(data.mesReferencia));
+    const mesFim = endOfMonth(mesInicio);
+    const dataVencimento = new Date(data.dataVencimento + 'T00:00:00');
 
-    // Verifica se aluno existe e está ativo
-    const aluno = await prisma.alunoFutebol.findUnique({
-      where: { id: alunoId },
-      include: { escolinha: true },
+    // Verifica aluno
+    const aluno = await prisma.alunoFutebol.findFirst({
+      where: { id: alunoId, escolinhaId },
+      include: { escolinha: { select: { valorMensalidadeFutebol: true } } },
     });
 
-    if (!aluno) throw new Error('Aluno não encontrado');
-    if (aluno.status !== 'ATIVO') throw new Error('Aluno não está ativo');
+    if (!aluno) {
+      throw new Error('Aluno não encontrado ou não pertence à escolinha');
+    }
 
-    const mesInicio = new Date(mesReferencia);
-    const mesFim = endOfMonth(mesInicio);
-
-    // Evita duplicata no mesmo mês
+    // Verifica duplicata
     const existente = await prisma.mensalidadeFutebol.findFirst({
       where: {
         alunoId,
-        mesReferencia: {
-          gte: startOfMonth(mesInicio),
-          lt: mesFim,
-        },
+        mesReferencia: { gte: mesInicio, lt: mesFim },
       },
     });
 
-    if (existente) throw new Error('Já existe mensalidade para este mês');
+    if (existente) {
+      throw new Error('Já existe mensalidade para este mês');
+    }
 
-    // Cria a mensalidade atual (pendente ou pago, dependendo do contexto)
+    // Valor da escolinha
+    const valor = aluno.escolinha?.valorMensalidadeFutebol ?? 90.00;
+
     const mensalidade = await prisma.mensalidadeFutebol.create({
       data: {
         alunoId,
-        escolinhaId: aluno.escolinhaId,
+        escolinhaId,
         mesReferencia: mesInicio,
         valor,
-        dataVencimento: new Date(dataVencimento),
-        status: 'pendente', // pode ser 'pago' se vier com dataPagamento
-        observacao,
+        dataVencimento,
+        status: 'pendente',
+        metodoPagamento: null,
+        observacao: data.observacao,
       },
     });
-
-    // Se marcado, gera próxima mensalidade pendente (mês seguinte)
-    if (gerarProximo) {
-      const proximoMes = addMonths(mesInicio, 1);
-      await prisma.mensalidadeFutebol.create({
-        data: {
-          alunoId,
-          escolinhaId: aluno.escolinhaId,
-          mesReferencia: startOfMonth(proximoMes),
-          valor, // mantém o mesmo valor (pode vir do plano depois)
-          dataVencimento: startOfMonth(proximoMes),
-          status: 'pendente',
-        },
-      });
-    }
 
     return mensalidade;
   }
-*/
-  // Geração automática (chamada por cron)
-  async generateAutomatic(mesReferencia?: string) {
-    const mes = mesReferencia ? new Date(mesReferencia) : new Date();
-    const mesInicio = startOfMonth(mes);
-    const mesFim = endOfMonth(mes);
 
-    // Alunos ativos que já têm pelo menos um pagamento (evita gerar para novos sem primeiro manual)
-    const alunosElegiveis = await prisma.alunoFutebol.findMany({
+  /**
+   * Geração automática de mensalidades para todos alunos ativos (cron job)
+   */
+async generateAutomatic(escolinhaId: string, mesReferencia?: string) {
+  try {
+    // 1. Define o mês de referência (declarado aqui, escopo correto)
+    let mesReferenciaStr = mesReferencia;
+    if (!mesReferenciaStr) {
+      const hoje = new Date();
+      mesReferenciaStr = format(hoje, "yyyy-MM") + "-01";
+    }
+
+    // 2. Converte para Date (declarado aqui)
+    const mes = new Date(mesReferenciaStr);
+    if (isNaN(mes.getTime())) {
+      throw new Error('Formato de mesReferencia inválido (use yyyy-MM-dd)');
+    }
+
+    mes.setDate(1);
+    mes.setHours(0, 0, 0, 0);
+
+    const mesFim = new Date(mes);
+    mesFim.setMonth(mesFim.getMonth() + 1);
+
+    console.log(`[CRON MENSALIDADE FUTEBOL] Processando mês: ${format(mes, 'MMMM yyyy', { locale: ptBR })}`);
+
+    // 3. Busca alunos (declarado aqui)
+    const alunos = await prisma.alunoFutebol.findMany({
       where: {
-        status: 'ATIVO',
-        mensalidades: { some: { status: 'PAGO' } },
+        status: 'ativo',
+        escolinhaId,
+      },
+      include: {
+        escolinha: {
+          select: { valorMensalidadeFutebol: true },
+        },
       },
     });
 
-    const created: any[] = [];
-    const skipped: string[] = [];
-
-    for (const aluno of alunosElegiveis) {
-      const existente = await prisma.mensalidadeFutebol.findFirst({
-        where: {
-          alunoId: aluno.id,
-          mesReferencia: {
-            gte: mesInicio,
-            lt: mesFim,
-          },
-        },
-      });
-
-      if (existente) {
-        skipped.push(aluno.nome);
-        continue;
-      }
-
-      // Valor padrão - idealmente viria do plano do aluno
-      const valor = 150.00; // ← substitua por lógica real (plano, mensalidade fixa, etc.)
-
-      const novoPendente = await prisma.mensalidadeFutebol.create({
-        data: {
-          alunoId: aluno.id,
-          escolinhaId: aluno.escolinhaId,
-          mesReferencia: mesInicio,
-          valor,
-          dataVencimento: new Date(mesInicio.getFullYear(), mesInicio.getMonth(), 10),
-          status: 'pendente',
-        },
-      });
-
-      created.push(novoPendente);
+    if (alunos.length === 0) {
+      return { 
+        success: true, 
+        message: 'Nenhum aluno ativo encontrado para geração automática' 
+      };
     }
 
+    console.log(`[CRON] Encontrados ${alunos.length} alunos ativos`);
+
+    const created: any[] = [];
+    const skipped: string[] = [];  // tipado explicitamente para evitar o erro
+    const errors: string[] = [];
+
+    // 4. Transação: usa as variáveis declaradas fora (alunos, mes, mesFim)
+    await prisma.$transaction(async (tx) => {
+      for (const aluno of alunos) {
+        try {
+          const existente = await tx.mensalidadeFutebol.findFirst({
+            where: {
+              alunoId: aluno.id,
+              mesReferencia: {
+                gte: mes,
+                lt: mesFim,
+              },
+            },
+          });
+
+          if (existente) {
+            skipped.push(aluno.nome);
+            continue;
+          }
+
+          const valor = aluno.escolinha?.valorMensalidadeFutebol ?? 90.00;
+
+          const mensalidade = await tx.mensalidadeFutebol.create({
+            data: {
+              alunoId: aluno.id,
+              escolinhaId,
+              mesReferencia: mes,
+              valor,
+              dataVencimento: new Date(mes.getFullYear(), mes.getMonth(), 10),
+              status: 'pendente',
+            },
+          });
+
+          created.push(mensalidade);
+          console.log(`[CRON] Mensalidade criada para ${aluno.nome} - ID: ${mensalidade.id}`);
+        } catch (err: any) {
+          console.error(`[CRON] Erro ao processar aluno ${aluno.nome}:`, err);
+          errors.push(`Aluno ${aluno.nome}: ${err.message}`);
+        }
+      }
+    });
+
     return {
+      success: true,
+      message: `Processamento concluído: ${created.length} mensalidades criadas, ${skipped.length} puladas, ${errors.length} erros`,
       createdCount: created.length,
-      created,
-      skippedCount: skipped.length,
       skipped,
+      errors,
     };
+  } catch (error: any) {
+    console.error('[CRON GERAR MENSALIDADES FUTEBOL] Erro fatal:', error);
+    return { error: 'Erro na geração automática', details: error.message };
   }
 }
 
-export const pagamentoFutebolService = new PagamentoFutebolService();
+  /**
+   * Lista histórico de mensalidades de um aluno
+   */
+  async listByAluno(alunoId: string, escolinhaId: string) {
+    const aluno = await prisma.alunoFutebol.findFirst({
+      where: { id: alunoId, escolinhaId },
+    });
+
+    if (!aluno) {
+      throw new Error('Aluno não encontrado ou não pertence à escolinha');
+    }
+
+    const pagamentos = await prisma.mensalidadeFutebol.findMany({
+      where: { alunoId },
+      orderBy: { mesReferencia: 'desc' },
+      select: {
+        id: true,
+        mesReferencia: true,
+        valor: true,
+        dataVencimento: true,
+        dataPagamento: true,
+        metodoPagamento: true,
+        status: true,
+        observacao: true,
+      },
+    });
+
+    return pagamentos;
+  }
+
+  /**
+ * Deleta uma mensalidade específica (pagamento) de um aluno de futebol
+ * - Verifica existência
+ * - Verifica se pertence à escolinha do usuário autenticado
+ * - Impede deleção se já foi pago (status PAGO) – opcional, ajuste conforme regra
+ */
+async deletePagamento(alunoId: string, pagamentoId: string, escolinhaId: string) {
+  // Busca a mensalidade com include para verificar dono
+  const pagamento = await prisma.mensalidadeFutebol.findFirst({
+    where: {
+      id: pagamentoId,
+      alunoId,
+    },
+    include: {
+      aluno: {
+        select: { escolinhaId: true },
+      },
+    },
+  });
+
+  if (!pagamento) {
+    throw new Error('Pagamento não encontrado ou não pertence ao aluno informado');
+  }
+
+  // Segurança: verifica se o pagamento pertence à escolinha do usuário logado
+  if (pagamento.aluno.escolinhaId !== escolinhaId) {
+    throw new Error('Pagamento não pertence à sua escolinha');
+  }
+
+  // Regra de negócio opcional: impede deletar pagamento já pago
+  if (pagamento.status === 'pago' || pagamento.dataPagamento) {
+    throw new Error('Não é permitido deletar pagamento já realizado');
+  }
+
+  // Deleta o registro
+  await prisma.mensalidadeFutebol.delete({
+    where: { id: pagamentoId },
+  });
+
+  return { success: true, message: 'Pagamento deletado com sucesso' };
+}
+}
+

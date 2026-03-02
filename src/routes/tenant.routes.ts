@@ -2,17 +2,18 @@
 import { Router } from 'express';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
-
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel, redefinirSenhaResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
 import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit } from '../controllers/tenant/aluno-crossfit.controller';
-import { pagamentosCrossfitController } from '../controllers/tenant/pagamentos-crossfit.controller';
-import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
 import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController} from '../controllers/tenant/treinos-futebol.controller';
+import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listByAlunoFutebol, deletePagamentoFutebol} from '../controllers/tenant/pagamentos-futebol.controller';
+//import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
+
+import { createManualCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -75,32 +76,40 @@ router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAni
 //ROTAS DE PAGAMENTO ALUNO FUTEBOL E CROSSFIT 
 //pagamentos Aluno futebol
 // POST /tenant/alunos/:alunoId/pagamentos
+router.post('/alunos/:alunoId/pagamentos', authMiddleware,  roleGuard('ADMIN'),createPagamentoManualFutebol);
+
+// Cron (pode ser protegida ou pública, dependendo da segurança)
+router.post('/pagamentos/generate-automatic', authMiddleware, roleGuard('ADMIN'), generatePagamentoAutomaticFutebol);
+
+  // Get pagamentos aluno
+ router.get('/alunos/:alunoId/pagamentos', authMiddleware, roleGuard('ADMIN'),listByAlunoFutebol);
+
+ //Dele Pagamento alunos futebol
+ router.delete('/alunos/:alunoId/pagamentos/:pagamentoId', authMiddleware, roleGuard('ADMIN'),deletePagamentoFutebol);
+
+
+ //pagamentos Aluno futebol
+// POST /tenant/alunos/:alunoId/pagamentos
+
+// antigo
+/*
 router.post('/alunos/:alunoId/pagamentos',  authMiddleware,  roleGuard('ADMIN'), pagamentosFutebolController.createManual);
 
 // Cron (pode ser protegida ou pública, dependendo da segurança)
-router.post('/pagamentos-futebol/generate-automatic',  
-  pagamentosFutebolController.generateAutomatic);
+router.post('/pagamentos-futebol/generate-automatic', pagamentosFutebolController.generateAutomatic);
 
   // Get pagamentos aluno
-  router.get('/alunos/:alunoId/pagamentos', 
-    authMiddleware, roleGuard('ADMIN'),
-    pagamentosFutebolController.listByAluno);
+  router.get('/alunos/:alunoId/pagamentos', authMiddleware, roleGuard('ADMIN'),pagamentosFutebolController.listByAluno);
 
-//pagamentos alunoCrossfit
+*/
+  //pagamentos alunoCrossfit
 // Geração MANUAL (admin cria para um aluno específico)
-router.post(
-  '/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware,
-  roleGuard('ADMIN'),
-  pagamentosCrossfitController.createManual.bind(pagamentosCrossfitController)
-);
+router.post('/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware, roleGuard('ADMIN'), createManualCrossfit);
 
 // Geração AUTOMÁTICA (chamada por cron job ou manualmente pelo admin)
-router.post(
-  '/mensalidades-crossfit/gerar-automaticas',authMiddleware,
-  roleGuard('ADMIN'), // ou crie um middleware específico para cron
-  pagamentosCrossfitController.generateAutomatic.bind(pagamentosCrossfitController)
-);
-
+router.post('/mensalidades-crossfit/gerar-automaticas',authMiddleware, roleGuard('ADMIN'), generateAutomaticCrossfit);
+// Get pagamentos aluno
+router.get('/mensalidades-crossfit/gerar-automaticas', authMiddleware, roleGuard('ADMIN'),listByAlunoCrossfit );
 
 
 

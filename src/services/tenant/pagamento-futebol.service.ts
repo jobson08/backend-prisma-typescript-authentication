@@ -45,7 +45,7 @@ export class PagamentosFutebolService {
         mesReferencia: mesInicio,
         valor,
         dataVencimento,
-        status: 'pendente',
+        status: 'PENDENTE',
         metodoPagamento: null,
         observacao: data.observacao,
       },
@@ -134,7 +134,7 @@ async generateAutomatic(escolinhaId: string, mesReferencia?: string) {
               mesReferencia: mes,
               valor,
               dataVencimento: new Date(mes.getFullYear(), mes.getMonth(), 10),
-              status: 'pendente',
+              status: 'PENDENTE',
             },
           });
 
@@ -220,7 +220,7 @@ async deletePagamento(alunoId: string, pagamentoId: string, escolinhaId: string)
   }
 
   // Regra de negócio opcional: impede deletar pagamento já pago
-  if (pagamento.status === 'pago' || pagamento.dataPagamento) {
+  if (pagamento.status === 'PAGO' || pagamento.dataPagamento) {
     throw new Error('Não é permitido deletar pagamento já realizado');
   }
 

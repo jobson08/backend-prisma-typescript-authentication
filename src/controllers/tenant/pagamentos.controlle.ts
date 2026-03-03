@@ -41,8 +41,8 @@ async marcarComoPago(req: Request, res: Response) {
     }
 
     // Agora pagamento existe e modalidade está definida
-    if (pagamento.status === 'pago') {
-      return res.status(400).json({ error: 'Pagamento já está marcado como pago' });
+    if (pagamento.status === 'PAGO') {
+      return res.status(400).json({ error: 'Pagamento já está marcado como PAGO' });
     }
 
     // Atualiza o status
@@ -50,32 +50,32 @@ async marcarComoPago(req: Request, res: Response) {
       await prisma.mensalidadeFutebol.update({
         where: { id: pagamentoId },
         data: {
-          status: 'pago',
+          status: 'PAGO',
           dataPagamento: new Date(),
           metodoPagamento: metodo || 'DINHEIRO',
         },
       });
-    //  console.log(`[MARCAR PAGO] Atualizado FUTEBOL ID ${pagamentoId} para pago`);
+    //  console.log(`[MARCAR PAGO] Atualizado FUTEBOL ID ${pagamentoId} para PAGO`);
     } else if (modalidade === 'crossfit') {
       await prisma.mensalidadeCrossfit.update({
         where: { id: pagamentoId },
         data: {
-          status: 'pago',
+          status: 'PAGO',
           dataPagamento: new Date(),
           metodoPagamento: metodo || 'DINHEIRO',
         },
       });
-    //  console.log(`[MARCAR PAGO] Atualizado CROSSFIT ID ${pagamentoId} para pago`);
+    //  console.log(`[MARCAR PAGO] Atualizado CROSSFIT ID ${pagamentoId} para PAGO`);
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Pagamento marcado como pago com sucesso',
-      data: { id: pagamentoId, status: 'pago' },
+      message: 'Pagamento marcado como PAGO com sucesso',
+      data: { id: pagamentoId, status: 'PAGO' },
     });
   } catch (error) {
   //  console.error('[MARCAR PAGO] Erro:', error);
-    return res.status(500).json({ error: 'Erro ao marcar pagamento como pago' });
+    return res.status(500).json({ error: 'Erro ao marcar pagamento como PAGO' });
   }
 }
 }

@@ -21,7 +21,7 @@ async createManual(alunoId: string, escolinhaId: string, input: unknown) {
     const mesInicio = startOfMonth(new Date(data.mesReferencia));
     const mesFim = endOfMonth(mesInicio);
 
-    const dataVencimento = new Date(data.dataVencimento);
+    const dataVencimento = new Date(data.dataVencimento + 'T00:00:00');
     dataVencimento.setHours(0, 0, 0, 0);
 
     // Busca aluno + valor da escolinha
@@ -165,19 +165,16 @@ async createManual(alunoId: string, escolinhaId: string, input: unknown) {
 
     return pagamentos;
   }
-  /*
+  
   //--------------------------------Excluir pagamento--------------------------------
-  async deletePagamento(clienteId: string, pagamentoId: string, escolinhaId: string) {
-  // Busca a mensalidade com include para verificar dono
+async deletePagamento(alunoId: string, pagamentoId: string, escolinhaId: string) {
   const pagamento = await prisma.mensalidadeCrossfit.findFirst({
     where: {
       id: pagamentoId,
-      clienteId,
+      clienteId: alunoId,  // ← campo no banco continua clienteId
     },
     include: {
-      cliente: {
-        select: { escolinhaId: true },
-      },
+      cliente: { select: { escolinhaId: true } },
     },
   });
 
@@ -190,18 +187,18 @@ async createManual(alunoId: string, escolinhaId: string, input: unknown) {
     throw new Error('Pagamento não pertence à sua escolinha');
   }
 
-  // Regra de negócio opcional: impede deletar pagamento já pago
+  // Regra de negócio: impede deletar pagamento já pago
   if (pagamento.status === 'pago' || pagamento.dataPagamento) {
     throw new Error('Não é permitido deletar pagamento já realizado');
   }
 
-  // Deleta o registro
-  await prisma.mensalidadeFutebol.delete({
+  // Correção crítica: tabela correta para CrossFit
+  await prisma.mensalidadeCrossfit.delete({
     where: { id: pagamentoId },
   });
 
   return { success: true, message: 'Pagamento deletado com sucesso' };
-}*/
+}
 }
 
 export const pagamentosCrossfitService = new PagamentosCrossfitService();

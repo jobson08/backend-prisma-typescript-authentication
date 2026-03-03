@@ -90,41 +90,27 @@ export const createManualCrossfit = async (req: Request, res: Response) => {
   }
 
 //-------------------------------------Excluir pagamento------------------------------------
-/*
-export const deletePagamentoCrossfitl = async (req: Request, res: Response) => {
+
+export const deletePagamentoCrossfit = async (req: Request, res: Response) => {
   try {
-    const { clienteId, pagamentoId } = req.params;
+    const { alunoId, pagamentoId } = req.params;  // ← mude para alunoId se a rota usar :alunoId
     const escolinhaId = req.escolinhaId!;
 
-    if (!clienteId || !pagamentoId) {
-      return res.status(400).json({ error: 'clienteId e pagamentoId são obrigatórios' });
+    console.log('[DELETE CROSSFIT CHAMADO] alunoId:', alunoId, 'pagamentoId:', pagamentoId);
+
+    if (!alunoId || !pagamentoId) {
+      return res.status(400).json({ error: 'alunoId e pagamentoId são obrigatórios' });
     }
 
-    // Correção aqui: use a instância "service" (já criada no topo)
     const result = await service.deletePagamento(
-      clienteId,
+      alunoId,
       pagamentoId,
       escolinhaId
     );
 
     return res.json(result);
   } catch (error: any) {
-    console.error('[DELETE PAGAMENTO FUTEBOL]', error);
-      console.log('DELETE PAGAMENTO CHAMADO - clienteId:', req.params.clienteId, 'pagamentoId:', req.params.pagamentoId);
-
-    if (error.message.includes('não encontrado')) {
-      return res.status(404).json({ error: error.message });
-    }
-
-    if (error.message.includes('pertence ao aluno') || error.message.includes('pertence à sua escolinha')) {
-      return res.status(403).json({ error: error.message });
-    }
-
-    if (error.message.includes('já realizado')) {
-      return res.status(403).json({ error: error.message });
-    }
-
-    return res.status(500).json({ error: 'Erro ao deletar pagamento' });
+    console.error('[DELETE PAGAMENTO CROSSFIT]', error);
+    // ... resto do tratamento
   }
 };
-*/

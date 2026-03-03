@@ -13,7 +13,7 @@ import { createTreinoFutebolController, getTreinoByIdController, listTreinosFute
 import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listByAlunoFutebol, deletePagamentoFutebol} from '../controllers/tenant/pagamentos-futebol.controller';
 //import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 
-import { createManualCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
+import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -110,7 +110,8 @@ router.post('/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware, role
 router.post('/mensalidades-crossfit/gerar-automaticas',authMiddleware, roleGuard('ADMIN'), generateAutomaticCrossfit);
 // Get pagamentos aluno
 router.get('/mensalidades-crossfit/gerar-automaticas', authMiddleware, roleGuard('ADMIN'),listByAlunoCrossfit );
-
+//Excluir pagamento 
+router.delete('/alunos-crossfit/:alunoId/mensalidades/:pagamentoId', authMiddleware, roleGuard('ADMIN'), tenantGuard, deletePagamentoCrossfit);
 //pagamento aluno futebol e aluno crossfit 
 router.put(
   '/pagamentos/:pagamentoId/marcar-pago',

@@ -111,9 +111,6 @@ router.post('/mensalidades-crossfit/gerar-automaticas',authMiddleware, roleGuard
 // Get pagamentos aluno
 router.get('/mensalidades-crossfit/gerar-automaticas', authMiddleware, roleGuard('ADMIN'),listByAlunoCrossfit );
 
-
-
-
 //pagamento aluno futebol e aluno crossfit 
 router.put(
   '/pagamentos/:pagamentoId/marcar-pago',
@@ -121,10 +118,6 @@ router.put(
   roleGuard('ADMIN'),
   pagamentosController.marcarComoPago
 );
-
-
-
-
 // Criar ou editar login para QUALQUER entidade
 router.post(
   '/login/:entityType/:entityId',

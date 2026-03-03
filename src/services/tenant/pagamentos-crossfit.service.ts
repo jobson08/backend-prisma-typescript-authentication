@@ -11,16 +11,25 @@ const createManualSchema = z.object({
 });
 
 export class PagamentosCrossfitService {
-  async createManual(alunoId: string, escolinhaId: string, input: unknown) {
+async createManual(alunoId: string, escolinhaId: string, input: unknown) {
+    if (!alunoId) {
+      throw new Error('alunoId é obrigatório');
+    }
+
     const data = createManualSchema.parse(input);
 
     const mesInicio = startOfMonth(new Date(data.mesReferencia));
     const mesFim = endOfMonth(mesInicio);
-    const dataVencimento = startOfDay(new Date(data.dataVencimento));
 
+    const dataVencimento = new Date(data.dataVencimento);
+    dataVencimento.setHours(0, 0, 0, 0);
+
+    // Busca aluno + valor da escolinha
     const aluno = await prisma.alunoCrossfit.findFirst({
       where: { id: alunoId, escolinhaId },
-      include: { escolinha: { select: { valorMensalidadeCrossfit: true } } },
+      include: {
+        escolinha: { select: { valorMensalidadeCrossfit: true } },
+      },
     });
 
     if (!aluno) {
@@ -29,7 +38,7 @@ export class PagamentosCrossfitService {
 
     const existente = await prisma.mensalidadeCrossfit.findFirst({
       where: {
-        clienteId: alunoId,  // ← CORRETO (nome do campo no model)
+        clienteId: alunoId,
         mesReferencia: { gte: mesInicio, lt: mesFim },
       },
     });
@@ -38,12 +47,16 @@ export class PagamentosCrossfitService {
       throw new Error('Já existe mensalidade para este mês');
     }
 
-    const valor = aluno.escolinha?.valorMensalidadeCrossfit ?? 149.00;
+    const valor = data.valor ?? aluno.escolinha?.valorMensalidadeCrossfit ?? 149.00;
 
     const mensalidade = await prisma.mensalidadeCrossfit.create({
       data: {
-        clienteId: alunoId,  // ← CORRETO
-        escolinhaId,
+        cliente: {
+          connect: { id: alunoId },   // ← correto
+        },
+        escolinha: {
+          connect: { id: escolinhaId }, // ← correto
+        },
         mesReferencia: mesInicio,
         valor,
         dataVencimento,
@@ -55,7 +68,7 @@ export class PagamentosCrossfitService {
 
     return mensalidade;
   }
-
+//----------------------pagamento aotomatico-----------------------------------------------
   async generateAutomatic(escolinhaId: string, mesReferencia?: string) {
     let mesRefStr = mesReferencia;
     if (!mesRefStr) {
@@ -123,6 +136,8 @@ export class PagamentosCrossfitService {
       message: `Mensalidades CrossFit: ${created.length} criadas, ${skipped.length} puladas`,
     };
   }
+
+  //-------------------------------listar historico pagamento alunos por Id-------------------------------
 
   async listByAluno(alunoId: string, escolinhaId: string) {
     const aluno = await prisma.alunoCrossfit.findFirst({

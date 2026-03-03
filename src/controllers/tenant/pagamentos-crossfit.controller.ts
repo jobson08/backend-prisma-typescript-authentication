@@ -14,29 +14,49 @@ const createManualSchema = z.object({
 
 export const createManualCrossfit = async (req: Request, res: Response) => {
   try {
-      const { clienteId } = req.params;
-      const escolinhaId = req.escolinhaId!;
-      const body = createManualSchema.parse(req.body);
+    const { alunoId } = req.params;           // ← aqui captura o ID da URL
+    const escolinhaId = req.escolinhaId!;
 
-      const mensalidade = await service.createManual(clienteId, escolinhaId, body);
-
-      return res.status(201).json({
-        success: true,
-        message: 'Mensalidade manual CrossFit criada com sucesso',
-        data: mensalidade,
-      });
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: 'Dados inválidos',
-          details: error.issues,
-        });
-      }
-      console.error('[CREATE MANUAL CROSSFIT]', error);
-      return res.status(500).json({ error: 'Erro ao criar mensalidade manual CrossFit' });
+    if (!alunoId) {
+      return res.status(400).json({ error: 'alunoId é obrigatório na URL' });
     }
-  }
 
+    const body = createManualSchema.parse(req.body);
+
+    const mensalidade = await service.createManual(
+      alunoId,
+      escolinhaId,
+      body
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Mensalidade manual CrossFit criada com sucesso',
+      data: mensalidade,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Dados inválidos',
+        details: error.issues,
+      });
+    }
+
+    console.error('[CREATE MANUAL CROSSFIT]', error);
+
+    if (error.message.includes('não encontrado') || error.message.includes('obrigatório')) {
+      return res.status(404).json({ error: error.message });
+    }
+
+    if (error.message.includes('já existe')) {
+      return res.status(409).json({ error: error.message });
+    }
+
+    return res.status(500).json({ error: 'Erro interno ao criar mensalidade' });
+  }
+};
+
+//-------------------------------Gerar pagamento aotomatico-------------------------------
   export const generateAutomaticCrossfit = async (req: Request, res: Response) => {
   try {
       const escolinhaId = req.escolinhaId!;

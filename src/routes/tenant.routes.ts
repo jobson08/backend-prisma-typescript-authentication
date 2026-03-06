@@ -17,6 +17,7 @@ import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listBy
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 import { escolinhaConfigController } from '../controllers/tenant/escolinha-config.controller';
 import { upload } from '../config/multer';
+import { aulaExtraController } from '../controllers/tenant/aula-extra.controller';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -102,71 +103,38 @@ router.get('/mensalidades-crossfit/gerar-automaticas', authMiddleware, roleGuard
 router.delete('/alunos-crossfit/:alunoId/mensalidades/:pagamentoId', authMiddleware, roleGuard('ADMIN'), tenantGuard, deletePagamentoCrossfit);
 //pagamento aluno futebol e aluno crossfit 
 router.put(
-  '/pagamentos/:pagamentoId/marcar-pago',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  pagamentosController.marcarComoPago
+  '/pagamentos/:pagamentoId/marcar-pago',authMiddleware, roleGuard('ADMIN'), pagamentosController.marcarComoPago
 );
 
 
 // Configurações da Escolinha
-router.get(
-  '/config/escolinha',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  escolinhaConfigController.getConfig
-);
+router.get('/config/escolinha', authMiddleware, roleGuard('ADMIN'), tenantGuard, escolinhaConfigController.getConfig);
 
-router.put(
-  '/config/geral',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  escolinhaConfigController.updateGeral
-);
+router.put( '/config/geral', authMiddleware, roleGuard('ADMIN'), tenantGuard, escolinhaConfigController.updateGeral);
 
-router.put(
-  '/config/aulas-extras',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  escolinhaConfigController.updateAulasExtras
-);
+router.put('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, escolinhaConfigController.updateAulasExtras);
 
-router.put(
-  '/config/crossfit',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  escolinhaConfigController.updateCrossfit
-);
+router.put('/config/crossfit', authMiddleware, roleGuard('ADMIN'), tenantGuard, escolinhaConfigController.updateCrossfit);
 
 // Uploads de imagens
-router.post(
-  '/config/logo',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  upload.single('logo'), // multer
-  escolinhaConfigController.uploadLogo
-);
+router.post('/config/logo', authMiddleware, roleGuard('ADMIN'), tenantGuard, upload.single('logo'), // multer
+escolinhaConfigController.uploadLogo);
 
-router.post(
-  '/config/crossfit-banner',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  upload.single('banner'), // multer
-  escolinhaConfigController.uploadCrossfitBanner
-);
+router.post('/config/crossfit-banner', authMiddleware, roleGuard('ADMIN'), tenantGuard, upload.single('banner'), // multer
+  escolinhaConfigController.uploadCrossfitBanner);
+
+//rotas de criar edita  e ecluir aulas extras  
+router.post('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.create);
+
+router.put('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.update);
+
+router.delete('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.delete);
+
+router.get('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getAll);
+
+router.get('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getById);
 
 // Criar ou editar login para QUALQUER entidade
-router.post(
-  '/login/:entityType/:entityId',
-  authMiddleware,
-  roleGuard('ADMIN', 'SUPERADMIN'), // ← passe os roles como argumentos separados
-  tenantGuard,
-  createOrUpdateLogin
-);
+router.post('/login/:entityType/:entityId', authMiddleware, roleGuard('ADMIN', 'SUPERADMIN'), // ← passe os roles como argumentos separados tenantGuard,
+ createOrUpdateLogin);
 export default router;

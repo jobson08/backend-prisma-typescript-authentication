@@ -1,5 +1,6 @@
 // src/routes/tenant.routes.ts
 import { Router } from 'express';
+
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
@@ -14,6 +15,8 @@ import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listBy
 //import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
+import { escolinhaConfigController } from '../controllers/tenant/escolinha-config.controller';
+import { upload } from '../config/multer';
 
 // Rotas específicas do tenant (painel da escolinha)
 const router = Router();
@@ -21,7 +24,7 @@ const router = Router();
 // Proteção: só ADMIN da escolinha pode acessar essas rotas
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
 
-//Rotas Funcionario
+//Rotas Funcionario (protegidos por ADMIN do tenant)
 router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
 router.get('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, listFuncionarios);
 router.get('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getFuncionarioById);
@@ -38,7 +41,7 @@ router.put('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateRespon
 router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
 router.post('/responsaveis/:id/redefinir-senha',authMiddleware,roleGuard('ADMIN'),tenantGuard,redefinirSenhaResponsavel);
-// Alunos (protegidos por ADMIN do tenant)
+// Alunos Futebol (protegidos por ADMIN do tenant)
 router.post('/alunos', authMiddleware, roleGuard('ADMIN'), createAluno);
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
@@ -72,8 +75,7 @@ router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAluno
 router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
 
 
-
-//ROTAS DE PAGAMENTO ALUNO FUTEBOL E CROSSFIT 
+//ROTAS DE PAGAMENTO ALUNO FUTEBOL
 //pagamentos Aluno futebol
 // POST /tenant/alunos/:alunoId/pagamentos
 router.post('/alunos/:alunoId/pagamentos', authMiddleware,  roleGuard('ADMIN'),createPagamentoManualFutebol);
@@ -88,21 +90,7 @@ router.post('/pagamentos/generate-automatic', authMiddleware, roleGuard('ADMIN')
  router.delete('/alunos/:alunoId/pagamentos/:pagamentoId', authMiddleware, roleGuard('ADMIN'),deletePagamentoFutebol);
 
 
- //pagamentos Aluno futebol
-// POST /tenant/alunos/:alunoId/pagamentos
-
-// antigo
-/*
-router.post('/alunos/:alunoId/pagamentos',  authMiddleware,  roleGuard('ADMIN'), pagamentosFutebolController.createManual);
-
-// Cron (pode ser protegida ou pública, dependendo da segurança)
-router.post('/pagamentos-futebol/generate-automatic', pagamentosFutebolController.generateAutomatic);
-
-  // Get pagamentos aluno
-  router.get('/alunos/:alunoId/pagamentos', authMiddleware, roleGuard('ADMIN'),pagamentosFutebolController.listByAluno);
-
-*/
-  //pagamentos alunoCrossfit
+//ROTAS DE PAGAMENTO ALUNO CROSSFIT 
 // Geração MANUAL (admin cria para um aluno específico)
 router.post('/alunos-crossfit/:alunoId/mensalidades/manual',authMiddleware, roleGuard('ADMIN'), createManualCrossfit);
 
@@ -119,6 +107,60 @@ router.put(
   roleGuard('ADMIN'),
   pagamentosController.marcarComoPago
 );
+
+
+// Configurações da Escolinha
+router.get(
+  '/config/escolinha',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  escolinhaConfigController.getConfig
+);
+
+router.put(
+  '/config/geral',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  escolinhaConfigController.updateGeral
+);
+
+router.put(
+  '/config/crossfit',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  escolinhaConfigController.updateCrossfit
+);
+
+// Uploads de imagens
+router.post(
+  '/config/logo',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  upload.single('logo'), // multer
+  escolinhaConfigController.uploadLogo
+);
+
+router.put(
+  '/config/crossfit',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  escolinhaConfigController.updateCrossfit
+);
+
+router.post(
+  '/config/crossfit-banner',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  upload.single('banner'), // multer
+  escolinhaConfigController.uploadCrossfitBanner
+);
+
 // Criar ou editar login para QUALQUER entidade
 router.post(
   '/login/:entityType/:entityId',

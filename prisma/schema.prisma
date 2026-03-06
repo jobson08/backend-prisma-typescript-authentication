@@ -154,8 +154,10 @@ model Escolinha {
   valorAulaExtraPadrao     Float?
   diaVencimento            Int
 
-  aulasExtrasAtivas Boolean @default(false)
-  crossfitAtivo     Boolean @default(false)
+  aulasExtrasAtivas      Boolean @default(false)
+  crossfitAtivo          Boolean @default(false)
+  mostrarCrossfitNavbar  Boolean @default(false)
+  mostrarCrossfitSidebar Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

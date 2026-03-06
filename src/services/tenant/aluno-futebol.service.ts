@@ -43,7 +43,7 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
         categoria: data.categoria,
         responsavelId: data.responsavelId || null,
         email: emailLower,
-        status: 'ativo',
+        status: 'ATIVO',
         observacoes: data.observacoes,
         escolinhaId,
         userId: user.id,  // Vincula aluno → user

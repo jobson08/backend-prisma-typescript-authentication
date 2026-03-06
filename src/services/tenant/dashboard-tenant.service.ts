@@ -71,7 +71,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
       where: {
         aluno: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: 'pago',
+        status: 'PAGO',
       },
       _sum: { valor: true },
     });
@@ -80,7 +80,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
       where: {
         cliente: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: 'pago',
+        status: 'PAGO',
       },
       _sum: { valor: true },
     });
@@ -99,7 +99,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
           where: {
             aluno: { escolinhaId },
             mesReferencia: { gte: mesInicioAnterior, lt: mesFimAnterior },
-            status: 'pago',
+            status: 'PAGO',
           },
           _sum: { valor: true },
         });
@@ -108,7 +108,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
           where: {
             cliente: { escolinhaId },
             mesReferencia: { gte: mesInicioAnterior, lt: mesFimAnterior },
-            status: 'pago',
+            status: 'PAGO',
           },
           _sum: { valor: true },
         });
@@ -144,7 +144,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
       where: {
         aluno: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: { in: ['pendente', 'atrasado'] },
+        status: { in: ['PENDENTE', 'ATRASADO'] },
       },
     });
 
@@ -152,7 +152,7 @@ async getDashboard(escolinhaId: string, mes?: string) {
       where: {
         cliente: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: { in: ['pendente', 'atrasado'] },
+        status: { in: ['PENDENTE', 'ATRASADO'] },
       },
     });
 
@@ -191,12 +191,12 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
 
    // console.log(`[INADIMPLENTES] Busca - escolinha: ${escolinhaId} | mês: ${mesReferencia}`);
 
-    // FUTEBOL - filtro limpo: só pendente ou atrasado
+    // FUTEBOL - filtro limpo: só PENDENTE ou ATRASADO
     const futebol = await prisma.mensalidadeFutebol.findMany({
       where: {
         aluno: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: { in: ['pendente', 'atrasado'] }, // ← só status, sem OR de dataVencimento
+        status: { in: ['PENDENTE', 'ATRASADO'] }, // ← só status, sem OR de dataVencimento
       },
       include: {
         aluno: {
@@ -213,7 +213,7 @@ async getAlunosInadimplentes(escolinhaId: string, mes?: string): Promise<Inadimp
       where: {
         cliente: { escolinhaId },
         mesReferencia: { gte: mesInicio, lt: mesFim },
-        status: { in: ['pendente', 'atrasado'] }, // ← removido o OR problemático
+        status: { in: ['PENDENTE', 'ATRASADO'] }, // ← removido o OR problemático
       },
       include: {
         cliente: { select: { nome: true } },

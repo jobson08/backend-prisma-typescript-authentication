@@ -3,3 +3,7 @@ export interface CrossfitConfigInput {
   mostrarNavbar: boolean;
   mostrarSidebar: boolean;
 }
+
+export interface AulasExtrasConfigInput {
+  ativarAulasExtras: boolean;
+}

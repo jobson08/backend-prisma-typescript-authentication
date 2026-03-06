@@ -9,6 +9,10 @@ const geralSchema = z.object({
   mensagemBoasVindas: z.string().optional(),
 });
 
+const aulasExtrasSchema = z.object({
+  ativarAulasExtras: z.boolean(),
+});
+
 const crossfitSchema = z.object({
   ativarCrossfit: z.boolean(),
   mostrarNavbar: z.boolean(),
@@ -61,6 +65,44 @@ async getConfig(req: Request, res: Response) {
         return res.status(400).json({ error: 'Dados inválidos', details: error.issues });
       }
       return res.status(500).json({ error: 'Erro ao atualizar configurações gerais' });
+    }
+  }
+
+  async updateAulasExtras(req: Request, res: Response) {
+    try {
+      const escolinhaId = req.escolinhaId!;
+
+      console.log('[CONTROLLER] Payload recebido (Aulas Extras):', req.body);
+
+      const data = aulasExtrasSchema.parse(req.body);
+
+      console.log('[CONTROLLER] Dados validados (Aulas Extras):', data);
+
+      const result = await escolinhaConfigService.updateAulasExtras(escolinhaId, data);
+
+      return res.json({
+        success: true,
+        message: 'Configurações de Aulas Extras atualizadas',
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('[UPDATE AULAS EXTRAS ERROR]', {
+        message: error.message,
+        stack: error.stack,
+        body: req.body,
+      });
+
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: 'Dados inválidos',
+          details: error.issues,
+        });
+      }
+
+      return res.status(500).json({
+        error: 'Erro interno ao atualizar Aulas Extras',
+        message: error.message || 'Erro desconhecido',
+      });
     }
   }
 

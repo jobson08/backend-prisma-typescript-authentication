@@ -127,6 +127,14 @@ router.put(
 );
 
 router.put(
+  '/config/aulas-extras',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  tenantGuard,
+  escolinhaConfigController.updateAulasExtras
+);
+
+router.put(
   '/config/crossfit',
   authMiddleware,
   roleGuard('ADMIN'),
@@ -142,14 +150,6 @@ router.post(
   tenantGuard,
   upload.single('logo'), // multer
   escolinhaConfigController.uploadLogo
-);
-
-router.put(
-  '/config/crossfit',
-  authMiddleware,
-  roleGuard('ADMIN'),
-  tenantGuard,
-  escolinhaConfigController.updateCrossfit
 );
 
 router.post(

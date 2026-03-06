@@ -1,5 +1,5 @@
 import { prisma } from '../../config/database';
-import { CrossfitConfigInput } from '../../types/escolinha-config';
+import { AulasExtrasConfigInput, CrossfitConfigInput } from '../../types/escolinha-config';
 
 export class EscolinhaConfigService {
  // src/services/tenant/escolinha-config.service.ts
@@ -48,6 +48,17 @@ async getConfig(escolinhaId: string) {
       data: {
         nome: data.nome,
         mensagemBoasVindas: data.mensagemBoasVindas,
+      },
+    });
+  }
+
+  async updateAulasExtras(escolinhaId: string, data: AulasExtrasConfigInput) {
+    console.log('[SERVICE] Atualizando Aulas Extras com:', data);
+
+    return prisma.escolinha.update({
+      where: { id: escolinhaId },
+      data: {
+        aulasExtrasAtivas: data.ativarAulasExtras,
       },
     });
   }

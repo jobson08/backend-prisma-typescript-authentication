@@ -34,11 +34,11 @@ export class EscolinhaConfigController {
 async getConfig(req: Request, res: Response) {
   try {
     const escolinhaId = req.escolinhaId!;
-    console.log('[GET CONFIG] Buscando para escolinhaId:', escolinhaId);
+   // console.log('[GET CONFIG] Buscando para escolinhaId:', escolinhaId);
 
     const config = await escolinhaConfigService.getConfig(escolinhaId);
 
-    console.log('[GET CONFIG] Dados retornados:', config);
+   // console.log('[GET CONFIG] Dados retornados:', config);
 
     return res.json({ success: true, data: config });
   } catch (error: any) {

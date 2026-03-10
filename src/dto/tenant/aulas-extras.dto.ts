@@ -10,19 +10,25 @@ export const createAulaExtraSchema = z.object({
   ),
   valor: z.number().positive("Valor deve ser maior que zero"),
   descricao: z.string().optional(),
-  alunoId: z.string().uuid("ID do aluno obrigatório").optional(),
-  funcionarioTreinadorId: z.string().uuid("ID do treinador obrigatório"),
 });
 
 export type CreateAulaExtraDTO = z.infer<typeof createAulaExtraSchema>;
 
-// Atualização de aula extra
+// Atualização de uma aula extra específica
 export const updateAulaExtraSchema = createAulaExtraSchema.partial().extend({
   id: z.string().uuid("ID da aula obrigatório"),
-  status: z.enum(["agendada", "concluida", "cancelada", "reagendada"]).optional(),
+  status: z.enum(["agendada", "ativa", "inativa", "arquivada"]).optional(),
 });
 
 export type UpdateAulaExtraDTO = z.infer<typeof updateAulaExtraSchema>;
+
+// Atualização em massa (ativação + lista completa - opcional)
+export const updateAulasExtrasConfigSchema = z.object({
+  ativarAulasExtras: z.boolean(),
+  aulas: z.array(createAulaExtraSchema).optional().default([]),
+});
+
+export type UpdateAulasExtrasConfigDTO = z.infer<typeof updateAulasExtrasConfigSchema>;
 
 // ID para getById e delete
 export const aulaExtraIdSchema = z.object({

@@ -1,41 +1,36 @@
 // src/services/tenant/aula-extra.service.ts
 import { prisma } from '../../config/database';
-import { CreateAulaExtraDTO, UpdateAulaExtraDTO } from '../../dto/tenant/aulas-extras.dto';
-
+import { CreateAulaExtraDTO, UpdateAulaExtraDTO, UpdateAulasExtrasConfigDTO } from '../../dto/tenant/aulas-extras.dto';
 
 export class AulaExtraService {
- async create(escolinhaId: string, data: CreateAulaExtraDTO) {
-  console.log('[SERVICE] Criando Aula Extra:', { escolinhaId, ...data });
+  async create(escolinhaId: string, data: CreateAulaExtraDTO) {
+    console.log('[SERVICE] Criando Aula Extra:', { escolinhaId, ...data });
 
-  return prisma.aulaExtra.create({
-    data: {
-      nome: data.nome,
-      duracao: data.duracao,           // ← minúsculo, igual ao schema
-      valor: data.valor,
-      descricao: data.descricao || null, // ← minúsculo
-      alunoId: data.alunoId || null,
-      funcionarioTreinadorId: data.funcionarioTreinadorId,
-      escolinhaId,
-      status: 'agendada',
-    },
-  });
-}
+    return prisma.aulaExtra.create({
+      data: {
+        nome: data.nome,
+        duracao: data.duracao,
+        valor: data.valor,
+        descricao: data.descricao,
+        escolinhaId,
+        status: 'agendada',
+      },
+    });
+  }
 
   async update(id: string, escolinhaId: string, data: UpdateAulaExtraDTO) {
-    console.log('[SERVICE] Atualizando Aula Extra:', {  escolinhaId, ...data });
+    console.log('[SERVICE] Atualizando Aula Extra:', { escolinhaId, ...data });
 
     return prisma.aulaExtra.update({
       where: {
         id,
-        escolinhaId, // segurança multi-tenant
+        escolinhaId,
       },
       data: {
         nome: data.nome,
         duracao: data.duracao,
         valor: data.valor,
         descricao: data.descricao,
-        alunoId: data.alunoId,
-        funcionarioTreinadorId: data.funcionarioTreinadorId,
         status: data.status,
       },
     });
@@ -55,10 +50,6 @@ export class AulaExtraService {
   async getAll(escolinhaId: string) {
     return prisma.aulaExtra.findMany({
       where: { escolinhaId },
-      include: {
-        aluno: { select: { nome: true } },
-        funcionarioTreinador: { select: { nome: true } },
-      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -69,10 +60,42 @@ export class AulaExtraService {
         id,
         escolinhaId,
       },
-      include: {
-        aluno: { select: { nome: true } },
-        funcionarioTreinador: { select: { nome: true } },
+    });
+  }
+
+  async updateAulasExtrasConfig(escolinhaId: string, data: UpdateAulasExtrasConfigDTO) {
+    console.log('[SERVICE] Atualizando config de Aulas Extras:', { escolinhaId, ...data });
+
+    // Atualiza flag de ativação
+    await prisma.escolinha.update({
+      where: { id: escolinhaId },
+      data: {
+        aulasExtrasAtivas: data.ativarAulasExtras,
       },
+    });
+
+    // Limpa aulas antigas (se quiser substituir tudo)
+    await prisma.aulaExtra.deleteMany({
+      where: { escolinhaId },
+    });
+
+    // Cria novas aulas (se houver)
+    if (data.aulas && data.aulas.length > 0) {
+      await prisma.aulaExtra.createMany({
+        data: data.aulas.map((aula) => ({
+          nome: aula.nome,
+          duracao: aula.duracao,
+          valor: aula.valor,
+          descricao: aula.descricao,
+          escolinhaId,
+          status: 'agendada',
+        })),
+      });
+    }
+
+    return prisma.escolinha.findUnique({
+      where: { id: escolinhaId },
+      select: { aulasExtrasAtivas: true },
     });
   }
 }

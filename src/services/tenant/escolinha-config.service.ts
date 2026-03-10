@@ -53,7 +53,7 @@ async getConfig(escolinhaId: string) {
   }
 
   async updateAulasExtras(escolinhaId: string, data: AulasExtrasConfigInput) {
-    console.log('[SERVICE] Atualizando Aulas Extras com:', data);
+  //  console.log('[SERVICE] Atualizando Aulas Extras com:', data);
 
     return prisma.escolinha.update({
       where: { id: escolinhaId },
@@ -64,7 +64,7 @@ async getConfig(escolinhaId: string) {
   }
 
 async updateCrossfit(escolinhaId: string, data: CrossfitConfigInput ) {
-    console.log('[SERVICE] Atualizando CrossFit com:', data);
+   // console.log('[SERVICE] Atualizando CrossFit com:', data);
 
     return prisma.escolinha.update({
       where: { id: escolinhaId },

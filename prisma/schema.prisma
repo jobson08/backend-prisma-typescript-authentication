@@ -117,7 +117,7 @@ model Pagamento {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  aulaExtras           AulaExtra[]
+  inscricoes           AulaExtraAluno[]
   mensalidadeCrossfits MensalidadeCrossfit[]
   mensalidadeFutebols  MensalidadeFutebol[]
 
@@ -201,10 +201,10 @@ model Funcionario {
   userId String? @unique // ← FK simples + @unique (sem @relation aqui!)
   // NÃO coloque user User? @relation(...) aqui — Prisma infere automaticamente
 
-  treinos     Treino[]
-  avaliacoes  Avaliacao[]
-  aulasExtras AulaExtra[]
-  user        User?
+  treinos    Treino[]
+  avaliacoes Avaliacao[]
+  inscricoes AulaExtraAluno[]
+  user       User?
 }
 
 // ==================== ALUNO FUTEBOL ====================
@@ -334,19 +334,13 @@ model AulaExtra {
   nome      String
   duracao   String
   valor     Float
-  status    String  @default("agendada")
   descricao String?
-
-  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
-  funcionarioTreinadorId String
+  status    String  @default("ativa") // ativa, inativa, arquivada
 
   escolinhaId String
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
 
-  alunos AulaExtraAluno[] // ← relacionamento muitos-para-muitos
-
-  pagamentoId String?
-  pagamento   Pagamento? @relation(fields: [pagamentoId], references: [id])
+  inscricoes AulaExtraAluno[] // várias inscrições/realizações
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -363,13 +357,20 @@ model AulaExtraAluno {
   alunoId String
   aluno   AlunoFutebol @relation(fields: [alunoId], references: [id], onDelete: Cascade)
 
-  status        String   @default("inscrito") // ex: inscrito, pago, cancelado
-  dataInscricao DateTime @default(now())
+  funcionarioTreinadorId String
+  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
+
+  pagamentoId String?
+  pagamento   Pagamento? @relation(fields: [pagamentoId], references: [id])
+
+  status     String    @default("inscrito") // inscrito, pago, concluido, cancelado, faltou
+  dataAula   DateTime? // data/hora real da aula (pode ser diferente da criação)
+  observacao String? // notas do professor ou aluno
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([aulaExtraId, alunoId]) // evita duplicatas
+  @@unique([aulaExtraId, alunoId]) // evita duplicar o mesmo aluno na mesma aula base
 }
 
 // ==================== TREINO ====================

@@ -123,18 +123,29 @@ escolinhaConfigController.uploadLogo);
 router.post('/config/crossfit-banner', authMiddleware, roleGuard('ADMIN'), tenantGuard, upload.single('banner'), // multer
   escolinhaConfigController.uploadCrossfitBanner);
 
-//rotas de criar edita  e ecluir aulas extras  
+//=========================rotas de criar edita  e ecluir aulas extras============================================  
+// Criação de aula extra individual
 router.post('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.create);
 
-router.put('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.update);
+// Atualização da configuração completa (ativação + lista de aulas)
+//router.put('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.updateAulasExtrasConfig);
 
-router.delete('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.delete);
+// Atualização individual de uma aula (opcional)
+router.put('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.update);
 
+//router.put('/config/aulas-extras/activation', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.updateActivation); // ← aponta para o novo método
+
+//Exclução de aula
+router.delete('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.delete);
+
+// Listagem de todas as aulas da escolinha
 router.get('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getAll);
 
-router.get('/config/aulas-extras:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getById);
+// Busca por ID (opcional)
+router.get('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getById);
 
-// Criar ou editar login para QUALQUER entidade
+
+//=============== Criar ou editar login para QUALQUER entidade======================================================
 router.post('/login/:entityType/:entityId', authMiddleware, roleGuard('ADMIN', 'SUPERADMIN'), // ← passe os roles como argumentos separados tenantGuard,
  createOrUpdateLogin);
 export default router;

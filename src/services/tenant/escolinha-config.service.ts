@@ -12,7 +12,9 @@ async getConfig(escolinhaId: string) {
       crossfitAtivo: true,              // existe
       mostrarCrossfitNavbar: true,      // existe
       mostrarCrossfitSidebar: true,     // existe
-      aulasExtrasAtivas: true,          // existe
+      aulasExtrasAtivas: true,
+      valorMensalidadeFutebol: true,    // existe
+      valorMensalidadeCrossfit: true,
       // NÃO inclua nada que não esteja no model acima
     },
   });

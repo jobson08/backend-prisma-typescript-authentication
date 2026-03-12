@@ -16,7 +16,11 @@ export type CreateAulaExtraDTO = z.infer<typeof createAulaExtraSchema>;
 
 // Atualização de uma aula extra específica
 export const updateAulaExtraSchema = createAulaExtraSchema.partial().extend({
-  id: z.string().uuid("ID da aula obrigatório"),
+ // id: z.string().uuid("ID da aula obrigatório"),
+  nome: z.string().min(3, "Nome da aula obrigatório").optional(),
+  valor: z.number().positive("Valor deve ser positivo").optional(),
+  duracao: z.string().min(1, "Duração obrigatória").optional(),
+  descricao: z.string().optional(),
   status: z.enum(["agendada", "ativa", "inativa", "arquivada"]).optional(),
 });
 

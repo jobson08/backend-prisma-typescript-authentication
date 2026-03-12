@@ -19,7 +19,7 @@ export class AulaExtraService {
   }
 
   async update(id: string, escolinhaId: string, data: UpdateAulaExtraDTO) {
-    console.log('[SERVICE] Atualizando Aula Extra:', { escolinhaId, ...data });
+    console.log('[SERVICE] Atualizando Aula Extra:', {id, escolinhaId, ...data });
 
     return prisma.aulaExtra.update({
       where: {

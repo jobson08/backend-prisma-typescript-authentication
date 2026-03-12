@@ -7,6 +7,8 @@ import { CrossfitConfigInput } from '../../types/escolinha-config';
 const geralSchema = z.object({
   nome: z.string().min(3),
   mensagemBoasVindas: z.string().optional(),
+  valorMensalidadeFutebol: z.number().optional(), 
+  valorMensalidadeCrossfit: z.number().optional(),
 });
 
 const aulasExtrasSchema = z.object({

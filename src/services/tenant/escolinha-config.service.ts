@@ -15,6 +15,7 @@ async getConfig(escolinhaId: string) {
       aulasExtrasAtivas: true,
       valorMensalidadeFutebol: true,    // existe
       valorMensalidadeCrossfit: true,
+      diaVencimento: true,
       // NÃO inclua nada que não esteja no model acima
     },
   });
@@ -37,8 +38,8 @@ async getConfig(escolinhaId: string) {
     pixNomeTitular: '',
     pixBanco: '',
     crossfitBannerUrl: null,
-    valorMensalidadeFutebol: 150.00,
-    valorMensalidadeCrossfit: null,
+    //valorMensalidadeFutebol: 150.00,
+    //valorMensalidadeCrossfit: null,
     valorAulaExtraPadrao: null,
     diaVencimento: 10,
   };

@@ -1,7 +1,7 @@
 // src/services/tenant/aluno-crossfit.service.ts
 import bcrypt from 'bcrypt';
 import { prisma } from '../../server';
-import { CreateAlunoCrossfitDto, UpdateAlunoCrossfitDto } from '../../dto/tenant/aluno-crossfit.dto';
+import { CreateAlunoCrossfitDto, CrossfitInscricaoDTO, CrossfitTurmaDTO, UpdateAlunoCrossfitDto, UpdateCrossfitInscricaoDTO } from '../../dto/tenant/aluno-crossfit.dto';
 
 
 export class AlunoCrossfitService {
@@ -254,6 +254,107 @@ export class AlunoCrossfitService {
 
     return { message: 'Aluno de CrossFit deletado com sucesso' };
   }
+//====================================Service criação de turmas e relacionamento com o aluno crossfit==============
+// Criar turma de CrossFit
+  async criarTurma(escolinhaId: string, data: CrossfitTurmaDTO) {
+    console.log('[SERVICE] Criando turma CrossFit:', { escolinhaId, ...data });
+
+    return prisma.aulaCrossfit.create({
+      data: {
+        ...data,
+        escolinhaId,
+      },
+    });
+  }
+
+  // Atualizar turma
+  async atualizarTurma(id: string, escolinhaId: string, data: Partial<CrossfitTurmaDTO>) {
+    console.log('[SERVICE] Atualizando turma CrossFit:', { id, escolinhaId, ...data });
+
+    return prisma.aulaCrossfit.update({
+      where: { id, escolinhaId },
+      data,
+    });
+  }
+
+  // Listar todas as turmas da escolinha
+  async listarTurmas(escolinhaId: string) {
+    return prisma.aulaCrossfit.findMany({
+      where: { escolinhaId },
+      include: {
+        professor: { select: { nome: true, id: true } },
+        _count: { select: { inscricoes: true } }, // para saber quantos alunos inscritos
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // Inscrever aluno em uma turma
+  async inscreverAluno(data: CrossfitInscricaoDTO) {
+    console.log('[SERVICE] Inscrevendo aluno em turma CrossFit:', data);
+
+    // Verifica duplicata
+    const jaInscrito = await prisma.aulaCrossfitAluno.findFirst({
+      where: {
+        aulaCrossfitId: data.aulaCrossfitId,
+        alunoId: data.alunoId,
+      },
+    });
+
+    if (jaInscrito) {
+      throw new Error("Este aluno já está inscrito nesta turma");
+    }
+
+    // Verifica vagas disponíveis
+    const turma = await prisma.aulaCrossfit.findUnique({
+      where: { id: data.aulaCrossfitId },
+      select: { vagasMax: true, _count: { select: { inscricoes: true } } },
+    });
+
+    if (!turma) throw new Error("Turma não encontrada");
+    if (turma._count.inscricoes >= turma.vagasMax) {
+      throw new Error("Turma lotada");
+    }
+
+    return prisma.aulaCrossfitAluno.create({
+      data: {
+        aulaCrossfitId: data.aulaCrossfitId,
+        alunoId: data.alunoId,
+        dataInicio: data.dataInicio ? new Date(data.dataInicio) : null,
+        observacao: data.observacao,
+      },
+    });
+  }
+
+  // Atualizar inscrição (ex: mudar status, adicionar observação)
+  async atualizarInscricao(id: string, data: UpdateCrossfitInscricaoDTO) {
+    return prisma.aulaCrossfitAluno.update({
+      where: { id },
+      data: {
+        dataInicio: data.dataInicio ? new Date(data.dataInicio) : undefined,
+        status: data.status,
+        observacao: data.observacao,
+      },
+    });
+  }
+
+  // Excluir inscrição
+  async excluirInscricao(id: string) {
+    return prisma.aulaCrossfitAluno.delete({ where: { id } });
+  }
+
+  // Listar alunos inscritos em uma turma
+  async listarInscricoes(turmaId: string) {
+    return prisma.aulaCrossfitAluno.findMany({
+      where: { aulaCrossfitId: turmaId },
+      include: {
+        aluno: { select: { nome: true, id: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
 }
+
 
 export const alunoCrossfitService = new AlunoCrossfitService();

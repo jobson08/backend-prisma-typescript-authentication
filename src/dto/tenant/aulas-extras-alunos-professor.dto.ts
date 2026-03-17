@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { prisma } from "../../server";
 
 // Criação de inscrição (vincular aluno + professor a uma aula)
 export const createAulaExtraAlunoSchema = z.object({
@@ -8,7 +9,18 @@ export const createAulaExtraAlunoSchema = z.object({
   dataAula: z.string().datetime("Data/hora inválida").optional(),
   status: z.enum(["inscrito", "pago", "concluido", "cancelado", "faltou"]).optional().default("inscrito"),
   observacao: z.string().optional(),
-  pagamentoId: z.string().uuid("ID do pagamento").optional(),
+pagamentoId: z.string().uuid("ID do pagamento").optional().nullable(),
+/*}).refine(async (data) => {
+  const existing = await prisma.aulaExtraAluno.findFirst({
+    where: {
+      aulaExtraId: data.aulaExtraId,
+      alunoId: data.alunoId,
+    },
+  });
+  return !existing;
+}, {
+  message: "Este aluno já está inscrito nesta aula",
+  path: ["alunoId"], // aponta o erro para o campo alunoId*/
 });
 
 export type CreateAulaExtraAlunoDTO = z.infer<typeof createAulaExtraAlunoSchema>;

@@ -74,7 +74,37 @@ export const AlunoCrossfitResponseDTO = z.object({
   userId: z.string().uuid().nullable().optional(),
 });
 
+// Criar ou atualizar uma turma de CrossFit
+export const crossfitTurmaSchema = z.object({
+  nome:               z.string().min(3, "Nome da turma obrigatório"),
+  horario:            z.string().optional(),                    // ex: "Segunda e Quarta - 19h"
+  valorMensalidade:   z.number().positive("Valor mensal obrigatório"),
+  vagasMax:           z.number().int().positive().min(1).optional().default(15),
+  descricao:          z.string().optional(),
+  professorId:        z.string().uuid("Professor responsável obrigatório"),
+  status:             z.enum(["ativa", "inativa", "lotada", "arquivada"]).optional().default("ativa"),
+});
+
+// Inscrever um aluno em uma turma
+export const crossfitInscricaoSchema = z.object({
+  aulaCrossfitId:     z.string().uuid("ID da turma obrigatório"),
+  alunoId:            z.string().uuid("ID do aluno obrigatório"),
+  dataInicio:         z.string().datetime("Data de início inválida").optional(),
+  observacao:         z.string().optional(),
+});
+
+// Atualizar inscrição (status, observação, data, etc.)
+export const updateCrossfitInscricaoSchema = z.object({
+  id:                 z.string().uuid("ID da inscrição obrigatório"),
+  dataInicio:         z.string().datetime().optional(),
+  status:             z.enum(["ativo", "cancelado", "expulso", "expirado"]).optional(),
+  observacao:         z.string().optional(),
+});
+
 // Tipos inferidos para uso no código
 export type CreateAlunoCrossfitDto = z.infer<typeof createAlunoCrossfitSchema>;
 export type UpdateAlunoCrossfitDto = z.infer<typeof updateAlunoCrossfitSchema>;
 export type AlunoCrossfitResponseDTO = z.infer<typeof AlunoCrossfitResponseDTO>;
+export type CrossfitTurmaDTO = z.infer<typeof crossfitTurmaSchema>;
+export type CrossfitInscricaoDTO = z.infer<typeof crossfitInscricaoSchema>;
+export type UpdateCrossfitInscricaoDTO = z.infer<typeof updateCrossfitInscricaoSchema>;

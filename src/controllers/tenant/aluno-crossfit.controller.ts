@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
 import { AlunoCrossfitService } from '../../services/tenant/aluno-crossfit.service';
-import { createAlunoCrossfitSchema, updateAlunoCrossfitSchema } from '../../dto/tenant/aluno-crossfit.dto';
+import { createAlunoCrossfitSchema, crossfitInscricaoSchema, crossfitTurmaSchema, updateAlunoCrossfitSchema, updateCrossfitInscricaoSchema } from '../../dto/tenant/aluno-crossfit.dto';
 
 const service = new AlunoCrossfitService();
 
@@ -188,3 +188,91 @@ export const deleteAlunoCrossfit = async (req: Request, res: Response) => {
     res.status(404).json({ error: error.message || "Aluno de CrossFit não encontrado" });
   }
 };
+
+//=======================Controller criação de turmas e relacionamento com o aluno crossfit==============
+//cria turmas crossfit
+export const criarTurma = async (req: Request, res: Response) =>{
+    try {
+      const data = crossfitTurmaSchema.parse(req.body);
+      const turma = await service.criarTurma(req.escolinhaId!, data);
+      return res.status(201).json({ success: true, message: 'Turma criada', data: turma });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
+      return res.status(500).json({ error: 'Erro ao criar turma' });
+    }
+  };
+
+  //atualisar turmas crossfit
+export const atualizarTurma = async (req: Request, res: Response) =>{
+  try {
+      const { id } = req.params;
+      const data = crossfitTurmaSchema.partial().parse(req.body);
+      const turma = await service.atualizarTurma(id, req.escolinhaId!, data);
+      return res.json({ success: true, message: 'Turma atualizada', data: turma });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
+      return res.status(500).json({ error: 'Erro ao atualizar turma' });
+    }
+  }
+
+  //listar turmas
+  export const listarTurmas = async (req: Request, res: Response) =>{
+    try {
+      const turmas = await service.listarTurmas(req.escolinhaId!);
+      return res.json({ success: true, data: turmas });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao listar turmas' });
+    }
+  }
+
+  // Cadastrar alunos a turmas
+
+  export const inscreverAluno = async (req: Request, res: Response) =>{
+    try {
+      const data = crossfitInscricaoSchema.parse(req.body);
+      const inscricao = await service.inscreverAluno(data);
+      return res.status(201).json({ success: true, message: 'Aluno inscrito', data: inscricao });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
+      if (err.message.includes("já está inscrito") || err.message.includes("lotada")) {
+        return res.status(409).json({ error: err.message });
+      }
+      return res.status(500).json({ error: 'Erro ao inscrever aluno' });
+    }
+  }
+
+  //Atualizar Incrição
+  export const atualizarInscricao =  async (req: Request, res: Response) =>{
+    try {
+      const { id } = req.params;
+      const data = updateCrossfitInscricaoSchema.parse(req.body);
+      const inscricao = await service.atualizarInscricao(id, data);
+      return res.json({ success: true, message: 'Inscrição atualizada', data: inscricao });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
+      return res.status(500).json({ error: 'Erro ao atualizar inscrição' });
+    }
+  }
+
+  //Excluir Incrisção
+  export const excluirInscricao = async (req: Request, res: Response) =>{
+    try {
+      const { id } = req.params;
+      await service.excluirInscricao(id);
+      return res.json({ success: true, message: 'Inscrição excluída' });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao excluir inscrição' });
+    }
+  }
+
+    //Listar Incrições
+  export const listarInscricoes = async (req: Request, res: Response) =>{
+    try {
+      const { turmaId } = req.params;
+      const inscricoes = await service.listarInscricoes(turmaId);
+      return res.json({ success: true, data: inscricoes });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao listar inscrições' });
+    }
+  }
+

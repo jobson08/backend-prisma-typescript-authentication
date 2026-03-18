@@ -82,14 +82,14 @@ export const crossfitTurmaSchema = z.object({
   vagasMax:           z.number().int().positive().min(1).optional().default(15),
   descricao:          z.string().optional(),
   professorId:        z.string().uuid("Professor responsável obrigatório"),
-  status:             z.enum(["ativa", "inativa", "lotada", "arquivada"]).optional().default("ativa"),
+  //status:             z.enum(["ativa", "inativa", "lotada", "arquivada"]).optional().default("ativa"),
 });
 
 // Inscrever um aluno em uma turma
 export const crossfitInscricaoSchema = z.object({
   aulaCrossfitId:     z.string().uuid("ID da turma obrigatório"),
   alunoId:            z.string().uuid("ID do aluno obrigatório"),
-  dataInicio:         z.string().datetime("Data de início inválida").optional(),
+  //dataInicio:         z.string().datetime("Data de início inválida").optional(),
   observacao:         z.string().optional(),
 });
 

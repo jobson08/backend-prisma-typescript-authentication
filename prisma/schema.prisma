@@ -389,6 +389,7 @@ model AulaCrossfit {
   escolinhaId      String
   escolinha        Escolinha           @relation(fields: [escolinhaId], references: [id])
   inscricoes       AulaCrossfitAluno[]
+  descricao        String?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 }

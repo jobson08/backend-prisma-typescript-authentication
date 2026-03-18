@@ -256,16 +256,25 @@ export class AlunoCrossfitService {
   }
 //====================================Service criação de turmas e relacionamento com o aluno crossfit==============
 // Criar turma de CrossFit
-  async criarTurma(escolinhaId: string, data: CrossfitTurmaDTO) {
-    console.log('[SERVICE] Criando turma CrossFit:', { escolinhaId, ...data });
+async criarTurma(escolinhaId: string, data: CrossfitTurmaDTO) {
+  console.log('[SERVICE] Criando turma CrossFit:', { escolinhaId, ...data });
 
-    return prisma.aulaCrossfit.create({
-      data: {
-        ...data,
-        escolinhaId,
-      },
-    });
+  // Verifica se professor existe (opcional, mas evita 500)
+  const professorExiste = await prisma.funcionario.findUnique({
+    where: { id: data.professorId },
+  });
+
+  if (!professorExiste) {
+    throw new Error("Professor não encontrado");
   }
+
+  return prisma.aulaCrossfit.create({
+    data: {
+      ...data,
+      escolinhaId, // ← sempre adicionado aqui
+    },
+  });
+}
 
   // Atualizar turma
   async atualizarTurma(id: string, escolinhaId: string, data: Partial<CrossfitTurmaDTO>) {
@@ -320,7 +329,7 @@ export class AlunoCrossfitService {
       data: {
         aulaCrossfitId: data.aulaCrossfitId,
         alunoId: data.alunoId,
-        dataInicio: data.dataInicio ? new Date(data.dataInicio) : null,
+      //  dataInicio: data.dataInicio ? new Date(data.dataInicio) : null,
         observacao: data.observacao,
       },
     });

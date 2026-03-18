@@ -191,16 +191,37 @@ export const deleteAlunoCrossfit = async (req: Request, res: Response) => {
 
 //=======================Controller criação de turmas e relacionamento com o aluno crossfit==============
 //cria turmas crossfit
-export const criarTurma = async (req: Request, res: Response) =>{
-    try {
-      const data = crossfitTurmaSchema.parse(req.body);
-      const turma = await service.criarTurma(req.escolinhaId!, data);
-      return res.status(201).json({ success: true, message: 'Turma criada', data: turma });
-    } catch (err: any) {
-      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
-      return res.status(500).json({ error: 'Erro ao criar turma' });
+export const criarTurma = async (req: Request, res: Response) => {
+  try {
+    const data = crossfitTurmaSchema.parse(req.body);
+
+    console.log('[CONTROLLER] Payload recebido para criar turma CrossFit:', {
+      ...data,
+      escolinhaId: req.escolinhaId,
+    });
+
+    const turma = await service.criarTurma(req.escolinhaId!, data);
+
+    return res.status(201).json({ success: true, message: 'Turma criada', data: turma });
+  } catch (err: any) {
+    console.error('[CREATE CROSSFIT TURMA ERROR] Erro completo:', {
+      message: err.message,
+      stack: err.stack,
+      payload: req.body,
+      escolinhaId: req.escolinhaId,
+    });
+
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
     }
-  };
+
+    if (err.code === 'P2003') { // Prisma foreign key constraint failed
+      return res.status(400).json({ error: 'Professor não encontrado ou inválido' });
+    }
+
+    return res.status(500).json({ error: 'Erro interno ao criar turma CrossFit' });
+  }
+};
 
   //atualisar turmas crossfit
 export const atualizarTurma = async (req: Request, res: Response) =>{
@@ -228,17 +249,20 @@ export const atualizarTurma = async (req: Request, res: Response) =>{
   // Cadastrar alunos a turmas
 
   export const inscreverAluno = async (req: Request, res: Response) =>{
-    try {
-      const data = crossfitInscricaoSchema.parse(req.body);
-      const inscricao = await service.inscreverAluno(data);
-      return res.status(201).json({ success: true, message: 'Aluno inscrito', data: inscricao });
-    } catch (err: any) {
-      if (err instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
-      if (err.message.includes("já está inscrito") || err.message.includes("lotada")) {
-        return res.status(409).json({ error: err.message });
-      }
-      return res.status(500).json({ error: 'Erro ao inscrever aluno' });
+   try {
+    const data = crossfitInscricaoSchema.parse(req.body);
+    const inscricao = await service.inscreverAluno(data);
+    return res.status(201).json({ success: true, message: 'Aluno inscrito', data: inscricao });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Dados inválidos', details: err.issues });
     }
+    if (err.message.includes("já está inscrito") || err.message.includes("lotada")) {
+      return res.status(409).json({ error: err.message });
+    }
+    console.error('[INScrever ALUNO CROSSFIT ERROR]', err);
+    return res.status(500).json({ error: 'Erro ao inscrever aluno' });
+   }
   }
 
   //Atualizar Incrição

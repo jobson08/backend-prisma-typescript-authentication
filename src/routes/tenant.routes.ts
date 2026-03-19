@@ -7,7 +7,7 @@ import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionar
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel, redefinirSenhaResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
-import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit, criarTurma, atualizarTurma, listarTurmas, inscreverAluno, atualizarInscricao, excluirInscricao, listarInscricoes } from '../controllers/tenant/aluno-crossfit.controller';
+import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit, criarTurma, atualizarTurma, listarTurmas, inscreverAluno, atualizarInscricao, excluirInscricao, listarInscricoes, excluirTurma } from '../controllers/tenant/aluno-crossfit.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
 import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController} from '../controllers/tenant/treinos-futebol.controller';
@@ -111,6 +111,8 @@ router.post('/crossfit/turmas',authMiddleware, roleGuard('ADMIN'), criarTurma);
 router.put('/crossfit/turmas/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, atualizarTurma);
 //get turmas
 router.get('/crossfit/turmas', authMiddleware, roleGuard('ADMIN'), tenantGuard, listarTurmas);
+//Excluir turmas
+router.delete('/crossfit/turmas/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, excluirTurma);
 
 // Inscrições
 router.post('/crossfit/inscricoes', authMiddleware, roleGuard('ADMIN'), tenantGuard, inscreverAluno);

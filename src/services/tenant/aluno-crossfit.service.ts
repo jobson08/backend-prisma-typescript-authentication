@@ -297,6 +297,32 @@ async criarTurma(escolinhaId: string, data: CrossfitTurmaDTO) {
       orderBy: { createdAt: 'desc' },
     });
   }
+//excluir Turmas
+  async excluirTurma(id: string, escolinhaId: string) {
+  console.log('[SERVICE] Excluindo turma CrossFit:', { id, escolinhaId });
+
+  // Verifica se a turma existe e pertence à escolinha
+  const turma = await prisma.aulaCrossfit.findFirst({
+    where: { id, escolinhaId },
+  });
+
+  if (!turma) {
+    throw new Error("Turma não encontrada ou não pertence à escolinha");
+  }
+
+  // Verifica se há inscrições ativas (opcional - para evitar exclusão com alunos inscritos)
+  const inscricoes = await prisma.aulaCrossfitAluno.count({
+    where: { aulaCrossfitId: id },
+  });
+
+  if (inscricoes > 0) {
+    throw new Error("Não é possível excluir turma com alunos inscritos. Transfira ou cancele as inscrições primeiro.");
+  }
+
+  return prisma.aulaCrossfit.delete({
+    where: { id },
+  });
+}
 
   // Inscrever aluno em uma turma
   async inscreverAluno(data: CrossfitInscricaoDTO) {

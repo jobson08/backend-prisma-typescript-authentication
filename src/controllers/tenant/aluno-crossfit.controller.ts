@@ -246,6 +246,21 @@ export const atualizarTurma = async (req: Request, res: Response) =>{
     }
   }
 
+  //Excluir turmas
+  export const excluirTurma = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await service.excluirTurma(id, req.escolinhaId!);
+    return res.json({ success: true, message: 'Turma excluída com sucesso' });
+  } catch (err: any) {
+    console.error('[EXCLUIR TURMA CROSSFIT ERROR]', err);
+    if (err.message.includes("não encontrada") || err.message.includes("inscritos")) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Erro ao excluir turma' });
+  }
+}
+
   // Cadastrar alunos a turmas
 
   export const inscreverAluno = async (req: Request, res: Response) =>{

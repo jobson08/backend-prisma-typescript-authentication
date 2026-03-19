@@ -50,6 +50,11 @@ export class AulaExtraService {
   async getAll(escolinhaId: string) {
     return prisma.aulaExtra.findMany({
       where: { escolinhaId },
+      include: {
+        _count: {
+    select: { inscricoes: true }  // ou o nome real da relação (AulaExtraAluno?)
+  }
+},
       orderBy: { createdAt: 'desc' },
     });
   }

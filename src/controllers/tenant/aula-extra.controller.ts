@@ -1,22 +1,23 @@
 // src/controllers/tenant/aula-extra.controller.ts
 import { Request, Response } from 'express';
-import { aulaExtraService } from '../../services/tenant/aula-extra.service';
+import { AulaExtraService, aulaExtraService } from '../../services/tenant/aula-extra.service';
 import { z } from 'zod';
 import {
   createAulaExtraSchema,
   updateAulaExtraSchema,
   updateAulasExtrasConfigSchema,
 } from '../../dto/tenant/aulas-extras.dto';
+import { prisma } from '../../server';
+const service = new AulaExtraService ();
 
-export class AulaExtraController {
-  async create(req: Request, res: Response) {
+  export const createAulaExtra = async (req: Request, res: Response)=> {
     try {
       const escolinhaId = req.escolinhaId!;
       const data = createAulaExtraSchema.parse(req.body);
 
       console.log('[CONTROLLER] Criando Aula Extra:', { escolinhaId, ...data });
 
-      const aula = await aulaExtraService.create(escolinhaId, data);
+      const aula = await service.create(escolinhaId, data);
 
       return res.status(201).json({
         success: true,
@@ -33,7 +34,7 @@ export class AulaExtraController {
   }
 
 
-  async update(req: Request, res: Response) {
+  export const updateAulaExtra = async (req: Request, res: Response) =>{
     try {
       const escolinhaId = req.escolinhaId!;
       const { id } = req.params;
@@ -41,7 +42,7 @@ export class AulaExtraController {
 
       console.log('[CONTROLLER] Atualizando Aula Extra:', { escolinhaId, ...data });
 
-      const aula = await aulaExtraService.update(id, escolinhaId, data);
+      const aula = await service.update(id, escolinhaId, data);
 
       return res.json({
         success: true,
@@ -57,7 +58,7 @@ export class AulaExtraController {
     }
   }
 
-async delete(req: Request, res: Response) {
+export const deleteAulaExtra = async(req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;
     const { id } = req.params;
@@ -74,10 +75,10 @@ async delete(req: Request, res: Response) {
   }
 }
 
-async getAll(req: Request, res: Response) {
+ export const getAll =async (req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;
-    const aulas = await aulaExtraService.getAll(escolinhaId);
+    const aulas = await service.getAll(escolinhaId);
     return res.json({ success: true, data: aulas });
   } catch (error: any) {
     console.error('[GET ALL AULAS EXTRAS ERROR]', error);
@@ -85,11 +86,11 @@ async getAll(req: Request, res: Response) {
   }
 }
 
-  async getById(req: Request, res: Response) {
+ export const getById = async (req: Request, res: Response) => {
     try {
       const escolinhaId = req.escolinhaId!;
       const { id } = req.params;
-      const aula = await aulaExtraService.getById(id, escolinhaId);
+      const aula = await service.getById(id, escolinhaId);
       if (!aula) return res.status(404).json({ error: 'Aula Extra não encontrada' });
       return res.json({ success: true, data: aula });
     } catch (error: any) {
@@ -98,7 +99,7 @@ async getAll(req: Request, res: Response) {
     }
   }
 
-  async updateAulasExtrasConfig(req: Request, res: Response) {
+ export const updateAulasExtrasConfig = async (req: Request, res: Response) => {
     try {
       const escolinhaId = req.escolinhaId!;
 
@@ -108,7 +109,7 @@ async getAll(req: Request, res: Response) {
 
       console.log('[CONTROLLER] Dados validados (Aulas Extras Config):', data);
 
-      const result = await aulaExtraService.updateAulasExtrasConfig(escolinhaId, data);
+      const result = await service.updateAulasExtrasConfig(escolinhaId, data);
 
       return res.json({
         success: true,
@@ -123,6 +124,34 @@ async getAll(req: Request, res: Response) {
       return res.status(500).json({ error: 'Erro ao atualizar configuração de aulas extras' });
     }
   }
-}
 
-export const aulaExtraController = new AulaExtraController();
+//ativar e desativar Aula Extra na  pagina configuração
+ export const toggleAulasExtrasActivation = async (req: Request, res: Response) =>{
+  try {
+    const { ativarAulasExtras } = req.body;
+
+    if (typeof ativarAulasExtras !== 'boolean') {
+      return res.status(400).json({ error: "O campo 'ativarAulasExtras' deve ser boolean" });
+    }
+
+    console.log('[CONTROLLER] Toggle Aulas Extras:', { 
+      escolinhaId: req.escolinhaId,
+      ativar: ativarAulasExtras 
+    });
+
+    await prisma.escolinha.update({
+      where: { id: req.escolinhaId! },
+      data: { aulasExtrasAtivas: ativarAulasExtras },
+    });
+
+    return res.json({ 
+      success: true, 
+      message: `Aulas extras ${ativarAulasExtras ? 'ativadas' : 'desativadas'}` 
+    });
+  } catch (err: any) {
+    console.error('[TOGGLE AULAS EXTRAS ERROR]', err);
+    return res.status(500).json({ error: 'Erro ao atualizar ativação' });
+  }
+ }
+
+

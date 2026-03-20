@@ -1,6 +1,7 @@
 // src/services/tenant/aula-extra.service.ts
-import { prisma } from '../../config/database';
+//import { prisma } from '../../config/database';
 import { CreateAulaExtraDTO, UpdateAulaExtraDTO, UpdateAulasExtrasConfigDTO } from '../../dto/tenant/aulas-extras.dto';
+import { prisma } from '../../server';
 
 export class AulaExtraService {
   async create(escolinhaId: string, data: CreateAulaExtraDTO) {
@@ -103,6 +104,15 @@ export class AulaExtraService {
       select: { aulasExtrasAtivas: true },
     });
   }
+
+  async toggleAulasExtrasActivation(escolinhaId: string, ativar: boolean) {
+  console.log('[SERVICE] Toggle ativação Aulas Extras:', { escolinhaId, ativar });
+
+  return prisma.escolinha.update({
+    where: { id: escolinhaId },
+    data: { aulasExtrasAtivas: ativar },
+  });
+}
 }
 
 export const aulaExtraService = new AulaExtraService();

@@ -189,6 +189,29 @@ export const deleteAlunoCrossfit = async (req: Request, res: Response) => {
   }
 };
 
+//ativar e desativar Crossfit na pagina configuração
+export const toggleCrossfitActivation = async (req: Request, res: Response) => {
+  try {
+    const { ativarCrossfit } = req.body;
+
+    if (typeof ativarCrossfit !== 'boolean') {
+      return res.status(400).json({ error: "O campo 'ativarCrossfit' deve ser boolean" });
+    }
+
+    await prisma.escolinha.update({
+      where: { id: req.escolinhaId! },
+      data: { crossfitAtivo: ativarCrossfit },
+    });
+
+    return res.json({ success: true, message: `CrossFit ${ativarCrossfit ? 'ativado' : 'desativado'}` });
+  } catch (err: any) {
+    console.error('[TOGGLE CROSSFIT ERROR]', err);
+    return res.status(500).json({ error: 'Erro ao atualizar ativação do CrossFit' });
+  }
+}
+
+
+
 //=======================Controller criação de turmas e relacionamento com o aluno crossfit==============
 //cria turmas crossfit
 export const criarTurma = async (req: Request, res: Response) => {

@@ -7,7 +7,7 @@ import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionar
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel, redefinirSenhaResponsavel } from '../controllers/tenant/responsavel.controller';
 import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
-import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit, criarTurma, atualizarTurma, listarTurmas, inscreverAluno, atualizarInscricao, excluirInscricao, listarInscricoes, excluirTurma } from '../controllers/tenant/aluno-crossfit.controller';
+import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit, criarTurma, atualizarTurma, listarTurmas, inscreverAluno, atualizarInscricao, excluirInscricao, listarInscricoes, excluirTurma, toggleCrossfitActivation } from '../controllers/tenant/aluno-crossfit.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
 import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController} from '../controllers/tenant/treinos-futebol.controller';
@@ -17,7 +17,7 @@ import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listBy
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 import { escolinhaConfigController } from '../controllers/tenant/escolinha-config.controller';
 import { upload } from '../config/multer';
-import { aulaExtraController } from '../controllers/tenant/aula-extra.controller';
+import { createAulaExtra, deleteAulaExtra, getAll, getById, toggleAulasExtrasActivation, updateAulaExtra } from '../controllers/tenant/aula-extra.controller';
 import { aulaExtraAlunoController } from '../controllers/tenant/aula-extra-alunos-professor.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
@@ -113,6 +113,8 @@ router.put('/crossfit/turmas/:id', authMiddleware, roleGuard('ADMIN'), tenantGua
 router.get('/crossfit/turmas', authMiddleware, roleGuard('ADMIN'), tenantGuard, listarTurmas);
 //Excluir turmas
 router.delete('/crossfit/turmas/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, excluirTurma);
+//ativa e desativa aula extra na pagina configuração
+router.put('/config/crossfit/activation', authMiddleware, roleGuard('ADMIN'), tenantGuard, toggleCrossfitActivation);
 
 // Inscrições
 router.post('/crossfit/inscricoes', authMiddleware, roleGuard('ADMIN'), tenantGuard, inscreverAluno);
@@ -138,24 +140,21 @@ router.post('/config/crossfit-banner', authMiddleware, roleGuard('ADMIN'), tenan
 
 //=========================Rotas de criar edita  e ecluir aulas extras============================================  
 // Criação de aula extra individual
-router.post('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.create);
-
+router.post('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, createAulaExtra);
 // Atualização da configuração completa (ativação + lista de aulas)
 //router.put('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.updateAulasExtrasConfig);
-
+//Desativar e ativa aula extra na pagina comfiguração
+router.put('/config/aulas-extras/activation', authMiddleware, roleGuard('ADMIN'), tenantGuard, toggleAulasExtrasActivation);
 // Atualização individual de uma aula (opcional)
-router.put('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.update);
-
-//router.put('/config/aulas-extras/activation', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.updateActivation); // ← aponta para o novo método
-
+router.put('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, updateAulaExtra);
 //Exclução de aula
-router.delete('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.delete);
+router.delete('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, deleteAulaExtra);
 
 // Listagem de todas as aulas da escolinha
-router.get('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getAll);
+router.get('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, getAll);
 
 // Busca por ID (opcional)
-router.get('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, aulaExtraController.getById);
+router.get('/config/aulas-extras/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getById);
 
 //====================================Rota de de aula-estra-aluno-professor================================
 router.post(

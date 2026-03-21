@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction, request } from 'express';
 import { prisma } from './config/database';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware, roleGuard } from './middleware/auth.middleware';
+import path from 'path';
 
 //import dotenv from "dotenv";
 import cors from "cors";
@@ -36,6 +37,9 @@ app.get('/', (req: Request, res: Response ) => {
 
 // Rotas públicas
 app.use('/api/v1/auth', authRoutes); 
+
+// Sirva arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ROTAS PROTEGIDAS (precisam de JWT + tenant)
 app.use('/api/v1/superadmin', authMiddleware, roleGuard('SUPERADMIN'), superadminRoutes);

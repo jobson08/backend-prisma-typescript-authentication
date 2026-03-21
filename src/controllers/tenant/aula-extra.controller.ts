@@ -99,7 +99,7 @@ export const deleteAulaExtra = async(req: Request, res: Response) => {
     }
   }
 
- export const updateAulasExtrasConfig = async (req: Request, res: Response) => {
+/* export const updateAulasExtrasConfig = async (req: Request, res: Response) => {
     try {
       const escolinhaId = req.escolinhaId!;
 
@@ -123,7 +123,7 @@ export const deleteAulaExtra = async(req: Request, res: Response) => {
       }
       return res.status(500).json({ error: 'Erro ao atualizar configuração de aulas extras' });
     }
-  }
+  }*/
 
 //ativar e desativar Aula Extra na  pagina configuração
  export const toggleAulasExtrasActivation = async (req: Request, res: Response) =>{

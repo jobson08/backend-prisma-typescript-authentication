@@ -1,6 +1,8 @@
 // src/routes/tenant.routes.ts
 import { Router } from 'express';
 
+import uploadImagensRoutes from './uploadImagens.routes';
+
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que valida e injeta escolinhaId
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
@@ -138,6 +140,7 @@ escolinhaConfigController.uploadLogo);
 router.post('/config/crossfit-banner', authMiddleware, roleGuard('ADMIN'), tenantGuard, upload.single('banner'), // multer
   escolinhaConfigController.uploadCrossfitBanner);
 
+ 
 //=========================Rotas de criar edita  e ecluir aulas extras============================================  
 // Criação de aula extra individual
 router.post('/config/aulas-extras', authMiddleware, roleGuard('ADMIN'), tenantGuard, createAulaExtra);
@@ -200,4 +203,8 @@ router.get(
 //=============== Criar ou editar login para QUALQUER entidade======================================================
 router.post('/login/:entityType/:entityId', authMiddleware, roleGuard('ADMIN', 'SUPERADMIN'), // ← passe os roles como argumentos separados tenantGuard,
  createOrUpdateLogin);
+
+//Rota de upload de imagens
+ router.use(uploadImagensRoutes);
+
 export default router;

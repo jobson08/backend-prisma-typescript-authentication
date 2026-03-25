@@ -1,60 +1,34 @@
 // src/routes/tenant/uploadImagens.routes.ts
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { prisma } from '../server';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware';
-// Tipo estendido (alternativa inline)
-interface CustomRequest extends Request {
-  escolinhaId?: string;
-}
-
+import cloudinary from '../config/cloudinary';
 const router = Router();
 
-// Configuração do multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  },
-});
+// Configuração do multer (memória - ideal para Cloudinary)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-fileFilter: (req, file, cb) => {
-  if (!file.mimetype.startsWith('image/')) {
-    return cb(null, false); // ← null + false = rejeita sem erro explícito
-  }
-  cb(null, true);
-},
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(null, false);
+    }
+    cb(null, true);
+  },
 });
 
-// Função auxiliar para gerar URL
-const saveFileAndGetUrl = async (file: Express.Multer.File, entity: string, id: string) => {
-  const filename = file.filename;
-  const url = `/uploads/${filename}`; // ajuste para URL pública ou CDN
-
-  return url;
-};
-
-// Rota genérica
+// ==================== UPLOAD ====================
 router.post(
   '/upload/:entity/:id?',
   authMiddleware,
   tenantGuard,
   roleGuard('ADMIN'),
   upload.single('file'),
-  async (req: CustomRequest, res: Response) => {
+  async (req, res) => {
     try {
       const { entity, id } = req.params;
       const file = req.file;
@@ -63,15 +37,18 @@ router.post(
         return res.status(400).json({ error: 'Nenhum arquivo enviado' });
       }
 
-      const url = await saveFileAndGetUrl(file, entity, id || req.escolinhaId!);
+      const result = await cloudinary.uploader.upload(
+        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        {
+          folder: `edupay/${entity}`,
+          transformation: [{ width: 800, height: 800, crop: 'limit' }],
+        }
+      );
 
-      // Atualiza entidade (exemplos)
-      if (entity === 'aluno-futebol' && id) {
-        await prisma.alunoFutebol.update({
-          where: { id },
-          data: { fotoUrl: url },
-        });
-      } else if (entity === 'escolinha' && !id) {
+      const url = result.secure_url;
+
+      // Atualiza banco
+      if (entity === 'escolinha' && !id) {
         await prisma.escolinha.update({
           where: { id: req.escolinhaId! },
           data: { logoUrl: url },
@@ -81,14 +58,71 @@ router.post(
           where: { id: req.escolinhaId! },
           data: { crossfitBannerUrl: url },
         });
+      } else if (entity === 'aluno-futebol' && id) {
+        await prisma.alunoFutebol.update({
+          where: { id },
+          data: { fotoUrl: url },
+        });
+      } else if (entity === 'aluno-crossfit' && id) {
+        await prisma.alunoCrossfit.update({
+          where: { id },
+          data: { fotoUrl: url },
+        });
       }
 
       return res.json({ success: true, url });
     } catch (err: any) {
-      console.error('[UPLOAD IMAGEM ERROR]', err);
+      console.error('[UPLOAD ERROR]', err);
       return res.status(500).json({ error: 'Erro ao fazer upload' });
     }
   }
 );
 
+// ==================== DELETE ====================
+router.delete(
+  '/upload/:entity/:id?',
+  authMiddleware,
+  tenantGuard,
+  roleGuard('ADMIN'),
+  async (req, res) => {
+    try {
+      const { entity, id } = req.params;
+      const { publicId } = req.body;
+
+      // Deleta do Cloudinary se tiver publicId
+      if (publicId) {
+        await cloudinary.uploader.destroy(publicId);
+        console.log(`[CLOUDINARY] Imagem deletada: ${publicId}`);
+      }
+
+      // Limpa a URL no banco
+      if (entity === 'escolinha' && !id) {
+        await prisma.escolinha.update({
+          where: { id: req.escolinhaId! },
+          data: { logoUrl: null },
+        });
+      } else if (entity === 'crossfit-banner' && !id) {
+        await prisma.escolinha.update({
+          where: { id: req.escolinhaId! },
+          data: { crossfitBannerUrl: null },
+        });
+      } else if (entity === 'aluno-futebol' && id) {
+        await prisma.alunoFutebol.update({
+          where: { id },
+          data: { fotoUrl: null },
+        });
+      } else if (entity === 'aluno-crossfit' && id) {
+        await prisma.alunoCrossfit.update({
+          where: { id },
+          data: { fotoUrl: null },
+        });
+      }
+
+      return res.json({ success: true, message: 'Imagem removida com sucesso' });
+    } catch (err: any) {
+      console.error('[DELETE IMAGE ERROR]', err);
+      return res.status(500).json({ error: 'Erro ao deletar imagem' });
+    }
+  }
+);
 export default router;

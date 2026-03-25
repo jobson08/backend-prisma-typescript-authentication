@@ -24,6 +24,8 @@ declare global {
 
       /** ID da escolinha (conveniência, preenchido em middlewares se necessário) */
       tenantId?: string;
+      escolinhaId?: string;
+      user?: any;
     }
   }
 }

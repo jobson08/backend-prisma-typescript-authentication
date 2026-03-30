@@ -1,9 +1,10 @@
 import bcrypt from 'bcrypt';
 import { CreateAlunoFutebolDto, UpdateAlunoFutebolDto } from '../../dto/tenant/aluno-futebol.dto';
 import { prisma } from '../../server';
+import cloudinary from '../../config/cloudinary';
 
 export class AlunoFutebolService {
-async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
+async create(escolinhaId: string, data: CreateAlunoFutebolDto, fotoFile?: Express.Multer.File) {
   console.log('[SERVICE CREATE ALUNO FUTEBOL] Dados recebidos:', JSON.stringify(data, null, 2));
 
   const emailLower = data.email.toLowerCase().trim();
@@ -17,7 +18,30 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
     throw new Error('E-mail já cadastrado');
   }
 
-  // Gera senha temporária (se não veio no payload)
+  let fotoUrl: string | null = null;
+
+  // ==================== UPLOAD DA FOTO (se enviada) ====================
+  if (fotoFile) {
+    try {
+      const result = await cloudinary.uploader.upload(
+        `data:${fotoFile.mimetype};base64,${fotoFile.buffer.toString('base64')}`,
+        {
+          folder: `alunos/${escolinhaId}`,
+          transformation: [{ width: 800, height: 800, crop: 'limit' }],
+          resource_type: "image",
+        }
+      );
+
+      fotoUrl = result.secure_url;
+      console.log('[SERVICE] Foto enviada com sucesso para Cloudinary:', fotoUrl);
+    } catch (uploadError: any) {
+      console.error('[SERVICE] Erro ao fazer upload da foto:', uploadError);
+      // Não quebra o cadastro se o upload falhar (opcional)
+      // throw new Error('Erro ao fazer upload da imagem');
+    }
+  }
+
+  // Gera senha temporária
   const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
   const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
 
@@ -33,7 +57,7 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
       },
     });
 
-    // 2. Cria o AlunoFutebol e vincula o userId
+    // 2. Cria o AlunoFutebol
     const aluno = await tx.alunoFutebol.create({
       data: {
         nome: data.nome,
@@ -46,11 +70,12 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
         status: 'ATIVO',
         observacoes: data.observacoes,
         escolinhaId,
-        userId: user.id,  // Vincula aluno → user
+        userId: user.id,
+        fotoUrl,                    // ← Salva a URL da imagem
       },
     });
 
-    // 3. Completa a relação bidirecional: vincula alunoFutebolId no User
+    // 3. Atualiza o User com o alunoFutebolId
     await tx.user.update({
       where: { id: user.id },
       data: {
@@ -63,7 +88,7 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto) {
 
   return result;
 }
-  
+  //LISTAR ALUNOS
   async list(escolinhaId: string) {
     return prisma.alunoFutebol.findMany({
       where: { escolinhaId },

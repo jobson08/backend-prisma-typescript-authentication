@@ -1,5 +1,6 @@
 // src/routes/tenant.routes.ts
 import { Router } from 'express';
+import multer from "multer";
 
 import uploadImagensRoutes from './uploadImagens.routes';
 
@@ -18,12 +19,26 @@ import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listBy
 
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 import { escolinhaConfigController } from '../controllers/tenant/escolinha-config.controller';
-import { upload } from '../config/multer';
+//import { upload } from '../config/multer';
 import { createAulaExtra, deleteAulaExtra, getAll, getById, toggleAulasExtrasActivation, updateAulaExtra } from '../controllers/tenant/aula-extra.controller';
 import { aulaExtraAlunoController } from '../controllers/tenant/aula-extra-alunos-professor.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
 const router = Router();
+
+// Configuração Multer
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Apenas imagens são permitidas"));
+    }
+  },
+});
 
 //----------------------------- Proteção: só ADMIN da escolinha pode acessar essas rotas-----------------
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
@@ -46,7 +61,7 @@ router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResp
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
 router.post('/responsaveis/:id/redefinir-senha',authMiddleware,roleGuard('ADMIN'),tenantGuard,redefinirSenhaResponsavel);
 // ------------------------------Alunos Futebol (protegidos por ADMIN do tenant)-----------------------
-router.post('/alunos', authMiddleware, roleGuard('ADMIN'), createAluno);
+router.post('/alunos', authMiddleware, roleGuard('ADMIN'), upload.single("foto"),createAluno);
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);

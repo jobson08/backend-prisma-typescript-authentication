@@ -20,15 +20,19 @@ function gerarSenhaAleatoria(tamanho = 10) {
 }
 
 export const createAluno = async (req: Request, res: Response) => {
-  console.log('[CONTROLLER CREATE ALUNO] Body recebido:', JSON.stringify(req.body, null, 2));
-
   try {
     const escolinhaId = req.escolinhaId!;
-    const data = createAlunoFutebolSchema.parse(req.body);
+    const fotoFile = req.file; // arquivo enviado pelo multer
 
-    console.log('[CONTROLLER CREATE ALUNO] Dados validados:', JSON.stringify(data, null, 2));
+    console.log('[CONTROLLER CREATE ALUNO] Foto recebida:', fotoFile ? fotoFile.originalname : 'Nenhuma');
 
-    const result = await service.create(escolinhaId, data);
+    // Validação dos dados (mantemos o schema, mas agora pegamos do req.body)
+    const data = createAlunoFutebolSchema.parse({
+      ...req.body,
+      // Se quiser permitir fotoUrl vir do body, pode adicionar aqui
+    });
+
+    const result = await service.create(escolinhaId, data, fotoFile);
 
     res.status(201).json({
       success: true,
@@ -45,10 +49,12 @@ export const createAluno = async (req: Request, res: Response) => {
     }
 
     console.error('[CREATE ALUNO] Erro:', error);
-    res.status(500).json({ error: 'Erro interno ao criar aluno' });
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Erro interno ao criar aluno' 
+    });
   }
 };
-
+//LISTAR ALUNOS
 export const listAlunos = async (req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;

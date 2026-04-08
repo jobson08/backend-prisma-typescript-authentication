@@ -24,36 +24,35 @@ export const createAlunoCrossfit = async (req: Request, res: Response) => {
 
   try {
     const escolinhaId = req.escolinhaId!;
-    const data = createAlunoCrossfitSchema.parse(req.body);
+     const fotoFile = req.file; // multer coloca o arquivo aqui
+    console.log('=== [CONTROLLER CREATE ALUNO] ===');
+    console.log('Foto recebida:', fotoFile ? fotoFile.originalname : 'NENHUMA FOTO');
+    console.log('Body recebido:', req.body);
 
-    console.log('[CONTROLLER CREATE ALUNO CROSSFIT] Dados validados:', JSON.stringify(data, null, 2));
+    // Extrai os dados do body
+    const data = {
+      nome: req.body.nome,
+      dataNascimento: req.body.dataNascimento,
+      telefone: req.body.telefone,
+      cpf: req.body.cpf,
+      email: req.body.email,
+      observacoes: req.body.observacoes || null,
+      password: req.body.password,
+    };
 
-    const result = await service.create(escolinhaId, data);
-
-    console.log('[CONTROLLER CREATE ALUNO CROSSFIT] Resultado:', JSON.stringify(result, null, 2));
+    const result = await service.create(escolinhaId, data, fotoFile);
 
     res.status(201).json({
       success: true,
-      message: 'Aluno Crossfit criado com sucesso',
+      message: 'Aluno criado com sucesso',
       data: result.aluno,
       senhaTemporaria: result.senhaTemporaria,
     });
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      console.error('[CREATE ALUNO CROSSFIT] Erro Zod:', error.issues);
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues.map(issue => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-          code: issue.code,
-        })),
-      });
-    }
-
-    const message = error instanceof Error ? error.message : 'Erro interno ao criar aluno crossfit';
-    console.error('[CREATE ALUNO CROSSFIT] Erro:', message, error);
-    res.status(500).json({ error: message });
+  } catch (error: any) {
+    console.error('[CONTROLLER CREATE ALUNO] Erro:', error);
+    res.status(400).json({ 
+      error: error.message || 'Erro ao criar aluno' 
+    });
   }
 };
 

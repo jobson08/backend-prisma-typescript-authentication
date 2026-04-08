@@ -2,10 +2,11 @@
 import bcrypt from 'bcrypt';
 import { prisma } from '../../server';
 import { CreateAlunoCrossfitDto, CrossfitInscricaoDTO, CrossfitTurmaDTO, UpdateAlunoCrossfitDto, UpdateCrossfitInscricaoDTO } from '../../dto/tenant/aluno-crossfit.dto';
+import cloudinary from '../../config/cloudinary';
 
 
 export class AlunoCrossfitService {
- async create(escolinhaId: string, data: CreateAlunoCrossfitDto) {
+ async create(escolinhaId: string,  data: any, fotoFile?: Express.Multer.File) {
     console.log('[SERVICE CREATE ALUNO CROSSFIT] Dados recebidos:', JSON.stringify(data, null, 2));
     console.log('[SERVICE CREATE ALUNO CROSSFIT] escolinhaId:', escolinhaId);
 
@@ -21,6 +22,32 @@ export class AlunoCrossfitService {
       throw new Error('E-mail já cadastrado');
     }
 
+     let fotoUrl: string | null = null;
+// ====================== UPLOAD PARA CLOUDINARY ======================
+  if (fotoFile) {
+    try {
+      console.log('[SERVICE] Iniciando upload da foto para Cloudinary...');
+
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${fotoFile.mimetype};base64,${fotoFile.buffer.toString('base64')}`,
+        {
+          folder: `edupay/${escolinhaId}/aluno-crossfit`,
+          transformation: [{ width: 800, height: 800, crop: 'limit' }],
+          resource_type: "image",
+        }
+      );
+
+      fotoUrl = uploadResult.secure_url;
+      console.log('[SERVICE] ✅ Foto enviada com sucesso para Cloudinary:', fotoUrl);
+    } catch (uploadError: any) {
+      console.error('[SERVICE] ❌ Erro ao fazer upload para Cloudinary:', uploadError.message || uploadError);
+      // Não interrompe o cadastro se o upload falhar
+    }
+  } else {
+    console.log('[SERVICE] Nenhuma foto foi enviada');
+  }
+
+   // ====================== CRIAÇÃO DO ALUNO ======================
     // Gera senha temporária (automática se não vier no payload)
     const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
     const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
@@ -56,6 +83,7 @@ export class AlunoCrossfitService {
           observacoes: data.observacoes,
           escolinhaId,
           userId: user.id,  // Vincula aluno → user
+          fotoUrl,       
         },
       });
 
@@ -64,9 +92,7 @@ export class AlunoCrossfitService {
       // Completa a relação bidirecional
       await tx.user.update({
         where: { id: user.id },
-        data: {
-          alunoCrossfitId: aluno.id,
-        },
+        data: { alunoCrossfitId: aluno.id },
       });
 
       console.log('[SERVICE CREATE ALUNO CROSSFIT] Relação bidirecional completa: alunoCrossfitId atualizado no User');

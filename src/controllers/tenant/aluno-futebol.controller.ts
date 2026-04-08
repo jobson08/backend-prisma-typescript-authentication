@@ -22,15 +22,24 @@ function gerarSenhaAleatoria(tamanho = 10) {
 export const createAluno = async (req: Request, res: Response) => {
   try {
     const escolinhaId = req.escolinhaId!;
-    const fotoFile = req.file; // arquivo enviado pelo multer
+    const fotoFile = req.file; // multer coloca o arquivo aqui
 
-    console.log('[CONTROLLER CREATE ALUNO] Foto recebida:', fotoFile ? fotoFile.originalname : 'Nenhuma');
+    console.log('=== [CONTROLLER CREATE ALUNO] ===');
+    console.log('Foto recebida:', fotoFile ? fotoFile.originalname : 'NENHUMA FOTO');
+    console.log('Body recebido:', req.body);
 
-    // Validação dos dados (mantemos o schema, mas agora pegamos do req.body)
-    const data = createAlunoFutebolSchema.parse({
-      ...req.body,
-      // Se quiser permitir fotoUrl vir do body, pode adicionar aqui
-    });
+    // Extrai os dados do body
+    const data = {
+      nome: req.body.nome,
+      dataNascimento: req.body.dataNascimento,
+      telefone: req.body.telefone,
+      cpf: req.body.cpf,
+      categoria: req.body.categoria,
+      responsavelId: req.body.responsavelId || null,
+      email: req.body.email,
+      observacoes: req.body.observacoes || null,
+      password: req.body.password,
+    };
 
     const result = await service.create(escolinhaId, data, fotoFile);
 
@@ -40,20 +49,14 @@ export const createAluno = async (req: Request, res: Response) => {
       data: result.aluno,
       senhaTemporaria: result.senhaTemporaria,
     });
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues,
-      });
-    }
-
-    console.error('[CREATE ALUNO] Erro:', error);
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Erro interno ao criar aluno' 
+  } catch (error: any) {
+    console.error('[CONTROLLER CREATE ALUNO] Erro:', error);
+    res.status(400).json({ 
+      error: error.message || 'Erro ao criar aluno' 
     });
   }
 };
+
 //LISTAR ALUNOS
 export const listAlunos = async (req: Request, res: Response) => {
   try {

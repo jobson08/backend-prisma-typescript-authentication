@@ -4,8 +4,12 @@ import { prisma } from '../../server';
 import cloudinary from '../../config/cloudinary';
 
 export class AlunoFutebolService {
-async create(escolinhaId: string, data: CreateAlunoFutebolDto, fotoFile?: Express.Multer.File) {
-  console.log('[SERVICE CREATE ALUNO FUTEBOL] Dados recebidos:', JSON.stringify(data, null, 2));
+async create(
+  escolinhaId: string, 
+  data: any, 
+  fotoFile?: Express.Multer.File
+) {
+  console.log('[SERVICE CREATE ALUNO] Iniciando...');
 
   const emailLower = data.email.toLowerCase().trim();
 
@@ -20,33 +24,35 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto, fotoFile?: Expres
 
   let fotoUrl: string | null = null;
 
-  // ==================== UPLOAD DA FOTO (se enviada) ====================
+  // ====================== UPLOAD PARA CLOUDINARY ======================
   if (fotoFile) {
     try {
-      const result = await cloudinary.uploader.upload(
+      console.log('[SERVICE] Iniciando upload da foto para Cloudinary...');
+
+      const uploadResult = await cloudinary.uploader.upload(
         `data:${fotoFile.mimetype};base64,${fotoFile.buffer.toString('base64')}`,
         {
-          folder: `alunos/${escolinhaId}`,
+          folder: `edupay/${escolinhaId}/aluno-futebol`,
           transformation: [{ width: 800, height: 800, crop: 'limit' }],
           resource_type: "image",
         }
       );
 
-      fotoUrl = result.secure_url;
-      console.log('[SERVICE] Foto enviada com sucesso para Cloudinary:', fotoUrl);
+      fotoUrl = uploadResult.secure_url;
+      console.log('[SERVICE] ✅ Foto enviada com sucesso para Cloudinary:', fotoUrl);
     } catch (uploadError: any) {
-      console.error('[SERVICE] Erro ao fazer upload da foto:', uploadError);
-      // Não quebra o cadastro se o upload falhar (opcional)
-      // throw new Error('Erro ao fazer upload da imagem');
+      console.error('[SERVICE] ❌ Erro ao fazer upload para Cloudinary:', uploadError.message || uploadError);
+      // Não interrompe o cadastro se o upload falhar
     }
+  } else {
+    console.log('[SERVICE] Nenhuma foto foi enviada');
   }
 
-  // Gera senha temporária
+  // ====================== CRIAÇÃO DO ALUNO ======================
   const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
   const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Cria o User
     const user = await tx.user.create({
       data: {
         email: emailLower,
@@ -57,7 +63,6 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto, fotoFile?: Expres
       },
     });
 
-    // 2. Cria o AlunoFutebol
     const aluno = await tx.alunoFutebol.create({
       data: {
         nome: data.nome,
@@ -71,23 +76,22 @@ async create(escolinhaId: string, data: CreateAlunoFutebolDto, fotoFile?: Expres
         observacoes: data.observacoes,
         escolinhaId,
         userId: user.id,
-        fotoUrl,                    // ← Salva a URL da imagem
+        fotoUrl,                    // ← Aqui salva a URL da imagem
       },
     });
 
-    // 3. Atualiza o User com o alunoFutebolId
     await tx.user.update({
       where: { id: user.id },
-      data: {
-        alunoFutebolId: aluno.id,
-      },
+      data: { alunoFutebolId: aluno.id },
     });
 
     return { aluno, senhaTemporaria };
   });
 
+  console.log('[SERVICE] Aluno criado com sucesso. fotoUrl:', fotoUrl || 'Nenhuma');
   return result;
 }
+
   //LISTAR ALUNOS
   async list(escolinhaId: string) {
     return prisma.alunoFutebol.findMany({

@@ -61,7 +61,7 @@ router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResp
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);
 router.post('/responsaveis/:id/redefinir-senha',authMiddleware,roleGuard('ADMIN'),tenantGuard,redefinirSenhaResponsavel);
 // ------------------------------Alunos Futebol (protegidos por ADMIN do tenant)-----------------------
-router.post('/alunos', authMiddleware, roleGuard('ADMIN'), upload.single("foto"),createAluno);
+router.post("/alunos", authMiddleware, roleGuard('ADMIN'), upload.single("foto"), createAluno);
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
@@ -70,7 +70,7 @@ router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);
 router.post('/alunos/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaAluno);
 
 // ---------------------------aluno crossfit (protegidos por ADMIN do tenant)---------------------------
-router.post('/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), createAlunoCrossfit);
+router.post('/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), upload.single("foto"), createAlunoCrossfit);
 router.get( '/alunos-crossfit',authMiddleware, roleGuard('ADMIN'), listAlunosCrossfit);
 router.get('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), getAlunoCrossfitById);
 router.patch('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlunoCrossfit);

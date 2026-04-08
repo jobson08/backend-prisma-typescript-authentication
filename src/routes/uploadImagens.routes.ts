@@ -5,9 +5,10 @@ import { prisma } from '../server';
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
 import { tenantGuard } from '../middleware/tenant.middleware';
 import cloudinary from '../config/cloudinary';
+
 const router = Router();
 
-// Configuração do multer (memória - ideal para Cloudinary)
+// Configuração do multer
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -37,10 +38,25 @@ router.post(
         return res.status(400).json({ error: 'Nenhum arquivo enviado' });
       }
 
+      let folderPath = `edupay/${entity}`;
+
+      // Organização especial para alunos
+      if (entity === 'aluno-futebol' && id) {
+        folderPath = `edupay/${req.escolinhaId}/aluno-futebol`;        // ← Alterado aqui
+      } else if (entity === 'aluno-crossfit' && id) {
+        folderPath = `edupay/${req.escolinhaId}/aluno-crossfit`;
+      } else if (entity === 'escolinha' && !id) {
+        folderPath = `edupay/${req.escolinhaId}/escolinha`;
+      } else if (entity === 'crossfit-banner' && !id) {
+        folderPath = `edupay/${req.escolinhaId}/crossfit-banner`;
+      }
+
+      console.log(`[UPLOAD] Usando pasta: ${folderPath}`);
+
       const result = await cloudinary.uploader.upload(
         `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
         {
-          folder: `edupay/${entity}`,
+          folder: folderPath,
           transformation: [{ width: 800, height: 800, crop: 'limit' }],
         }
       );
@@ -89,7 +105,6 @@ router.delete(
       const { entity, id } = req.params;
       const { publicId } = req.body;
 
-      // Deleta do Cloudinary se tiver publicId
       if (publicId) {
         await cloudinary.uploader.destroy(publicId);
         console.log(`[CLOUDINARY] Imagem deletada: ${publicId}`);
@@ -125,4 +140,5 @@ router.delete(
     }
   }
 );
+
 export default router;

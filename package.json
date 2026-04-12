@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "npx nodemon src/server.ts 'src/' -e ts",
     "compile": "npx tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",

@@ -17,11 +17,16 @@ import { createTreinoFutebolController, getTreinoByIdController, listTreinosFute
 import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listByAlunoFutebol, deletePagamentoFutebol} from '../controllers/tenant/pagamentos-futebol.controller';
 //import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 
+import { FinanceiroMensalQuerySchema } from '../dto/tenant/financeiro.dto';
+import { InadimplentesQuerySchema } from '../dto/tenant/inadimplentes.dto';
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
 import { escolinhaConfigController } from '../controllers/tenant/escolinha-config.controller';
 //import { upload } from '../config/multer';
 import { createAulaExtra, deleteAulaExtra, getAll, getById, toggleAulasExtrasActivation, updateAulaExtra } from '../controllers/tenant/aula-extra.controller';
 import { aulaExtraAlunoController } from '../controllers/tenant/aula-extra-alunos-professor.controller';
+import { getFinanceiroMensalController } from '../controllers/tenant/financeiro.controller';
+import { validate } from '../middleware/validate';
+import { getInadimplentesController } from '../controllers/tenant/inadimplentes.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
 const router = Router();
@@ -213,6 +218,24 @@ router.get(
   roleGuard('ADMIN'),
   tenantGuard,
   aulaExtraAlunoController.getById
+);
+
+//=============== Rota finaceiro (dashboard)======================================================
+router.get(
+  '/financeiro/mensal',
+  authMiddleware,
+  roleGuard('ADMIN'),           // ou o role que você quiser permitir
+  validate(FinanceiroMensalQuerySchema),
+  getFinanceiroMensalController
+);
+
+//=============== Rota Inadiplete (dashboard)======================================================
+router.get(
+  '/inadimplentes',
+  authMiddleware,
+  roleGuard('ADMIN'),
+  validate(InadimplentesQuerySchema),
+  getInadimplentesController
 );
 
 //=============== Criar ou editar login para QUALQUER entidade======================================================

@@ -26,6 +26,7 @@ declare global {
       tenantId?: string;
       escolinhaId?: string;
       user?: any;
+      validatedQuery?: any;
     }
   }
 }

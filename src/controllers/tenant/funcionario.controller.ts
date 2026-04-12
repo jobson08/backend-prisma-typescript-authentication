@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
 import { createFuncionarioSchema, updateFuncionarioSchema,} from '../../dto/tenant/funcionario.dto';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { FuncionarioService } from '../../services/tenant/funcionario.service';
 const service = new FuncionarioService();
 
 //======================================criar funcionario=================================
-export const createFuncionario = async (req: Request, res: Response) => {
+export const createFuncionario = async (req: Request, res: Response, next: NextFunction) => {
   console.log('[CONTROLLER CREATE FUNCIONARIO] Iniciando criação');
   console.log('[CONTROLLER CREATE FUNCIONARIO] Body recebido:', JSON.stringify(req.body, null, 2));
 

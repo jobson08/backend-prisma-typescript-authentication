@@ -1,5 +1,5 @@
 // src/controllers/tenant/aluno-crossfit.controller.ts
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
@@ -18,16 +18,11 @@ function gerarSenhaAleatoria(tamanho = 10) {
   return senha;
 }
 
-export const createAlunoCrossfit = async (req: Request, res: Response) => {
-  console.log('[CONTROLLER CREATE ALUNO CROSSFIT] Iniciando criação');
-  console.log('[CONTROLLER CREATE ALUNO CROSSFIT] Body recebido:', JSON.stringify(req.body, null, 2));
-
+export const createAlunoCrossfit = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const escolinhaId = req.escolinhaId!;
      const fotoFile = req.file; // multer coloca o arquivo aqui
-    console.log('=== [CONTROLLER CREATE ALUNO] ===');
-    console.log('Foto recebida:', fotoFile ? fotoFile.originalname : 'NENHUMA FOTO');
-    console.log('Body recebido:', req.body);
+    console.log('=== [CONTROLLER CREATE ALUNO CROSSFIT] Foto recebida:', fotoFile ? fotoFile.originalname : 'Nenhuma foto');
 
     // Extrai os dados do body
     const data = {
@@ -53,6 +48,7 @@ export const createAlunoCrossfit = async (req: Request, res: Response) => {
     res.status(400).json({ 
       error: error.message || 'Erro ao criar aluno' 
     });
+    next(error);
   }
 };
 

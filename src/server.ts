@@ -9,6 +9,10 @@ import cors from "cors";
 import morgan from "morgan";
 import superadminRoutes from './routes/superadmin.routes';
 import tenantRoutes from './routes/tenant.routes';
+// Inicia o cron job automático de pagamentos mensais
+import './cron/generateMonthlyPayments';
+import { errorHandler } from './middleware/error.middleware';
+
 //import helmet from 'helmet';
 
 const app = express();
@@ -44,10 +48,12 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // ROTAS PROTEGIDAS (precisam de JWT + tenant)
 app.use('/api/v1/superadmin', authMiddleware, roleGuard('SUPERADMIN'), superadminRoutes);
 app.use('/api/v1/tenant', tenantRoutes);
+
+//tratamento de erros
+app.use(errorHandler);
+
 //app.use('/api/v1/admin', authMiddleware, roleGuard('ADMIN'), tenantGuard, adminRoutes);
 
-// Inicia o cron job automático de pagamentos mensais
-import './cron/generateMonthlyPayments';
 
 const PORT = process.env.PORT || 4000;
 const HOST = process.env.HOST;

@@ -2,6 +2,7 @@
 import { prisma } from '../../server';
 import { CreateFuncionarioDto, UpdateFuncionarioDto } from '../../dto/tenant/funcionario.dto';
 import bcrypt from 'bcrypt';
+import { AppError } from '../../utils/AppError';
 
 export class FuncionarioService {
 async create(escolinhaId: string, data: CreateFuncionarioDto) {
@@ -16,7 +17,7 @@ async create(escolinhaId: string, data: CreateFuncionarioDto) {
 
   if (existing) {
       console.log('[SERVICE CREATE FUNCIONARIO] Email duplicado encontrado');
-    throw new Error('E-mail já cadastrado');
+    throw new AppError('E-mail já cadastrado', 409);
   }
 
   const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';

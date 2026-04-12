@@ -2,6 +2,7 @@
 import { prisma } from '../../server';
 import bcrypt from 'bcrypt';
 import { CreateResponsavelDto, UpdateResponsavelDto } from '../../dto/tenant/responsavel.dto';
+import { AppError } from '../../utils/AppError';
 
 export class ResponsavelService {
 async create(escolinhaId: string, data: CreateResponsavelDto) {
@@ -17,7 +18,7 @@ async create(escolinhaId: string, data: CreateResponsavelDto) {
 
   if (existingUser) {
     console.log('[SERVICE CREATE RESPONSAVEL] Email duplicado encontrado');
-    throw new Error('E-mail já cadastrado');
+    throw new AppError('E-mail já cadastrado', 409);
   }
 
   // Gera senha temporária (automática se não vier no payload)

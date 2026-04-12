@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { CreateAlunoFutebolDto, UpdateAlunoFutebolDto } from '../../dto/tenant/aluno-futebol.dto';
 import { prisma } from '../../server';
 import cloudinary from '../../config/cloudinary';
+import { AppError } from '../../utils/AppError';
 
 export class AlunoFutebolService {
 async create(
@@ -19,7 +20,7 @@ async create(
   });
 
   if (existingUser) {
-    throw new Error('E-mail já cadastrado');
+    throw new AppError('E-mail já cadastrado',409);
   }
 
   let fotoUrl: string | null = null;
@@ -111,7 +112,7 @@ async create(
     });
 
     if (!aluno) {
-      throw new Error("Aluno não encontrado");
+      throw new AppError("Aluno não encontrado",409);
     }
 
     return aluno;

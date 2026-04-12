@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { prisma } from '../../server';
 import { CreateAlunoCrossfitDto, CrossfitInscricaoDTO, CrossfitTurmaDTO, UpdateAlunoCrossfitDto, UpdateCrossfitInscricaoDTO } from '../../dto/tenant/aluno-crossfit.dto';
 import cloudinary from '../../config/cloudinary';
+import { AppError } from '../../utils/AppError';
 
 
 export class AlunoCrossfitService {
@@ -19,7 +20,7 @@ export class AlunoCrossfitService {
 
     if (existingUser) {
       console.log('[SERVICE CREATE ALUNO CROSSFIT] Email duplicado encontrado');
-      throw new Error('E-mail já cadastrado');
+      throw new AppError('E-mail já cadastrado', 409);
     }
 
      let fotoUrl: string | null = null;

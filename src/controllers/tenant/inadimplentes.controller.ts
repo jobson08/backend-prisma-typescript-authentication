@@ -8,14 +8,14 @@ export const getInadimplentesController = async (req: Request, res: Response) =>
     const escolinhaId = req.escolinhaId!;
     const validatedQuery = (req as any).validatedQuery;
 
-    if (!validatedQuery?.mes) {
+    if (!validatedQuery?.ano) {
       return res.status(400).json({
         success: false,
-        error: "Parâmetro 'mes' é obrigatório"
+        error: "Parâmetro 'ano' é obrigatório (yyyy)"
       });
     }
 
-    const inadimplentes = await getInadimplentes(escolinhaId, validatedQuery.mes);
+    const inadimplentes = await getInadimplentes(escolinhaId, validatedQuery.ano);
 
     const totalDevido = inadimplentes.reduce((sum, i) => sum + i.valorDevido, 0);
 

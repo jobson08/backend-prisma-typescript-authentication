@@ -2,9 +2,9 @@
 import { z } from 'zod';
 
 export const InadimplentesQuerySchema = z.object({
-  mes: z
-    .string({ error: "O mês é obrigatório" })
-    .regex(/^\d{4}-\d{2}$/, "Formato inválido. Use yyyy-MM (ex: 2025-12)"),
+  ano: z
+    .string({ error: "O ano é obrigatório" })
+    .regex(/^\d{4}$/, "Formato inválido. Use yyyy (ex: 2025)"),
 });
 
 export interface Inadimplente {
@@ -17,7 +17,7 @@ export interface Inadimplente {
   mesesAtraso: number;
   ultimaMensalidade: string;
   alunoId: string;
-  modalidade: "futebol" | "crossfit";   // ← Adicionado
+  modalidade: "futebol" | "crossfit";
 }
 
 export const InadimplentesResponseSchema = z.object({
@@ -32,6 +32,7 @@ export const InadimplentesResponseSchema = z.object({
     mesesAtraso: z.number(),
     ultimaMensalidade: z.string(),
     alunoId: z.string(),
+    modalidade: z.enum(["futebol", "crossfit"]),
   })),
   total: z.number(),
   totalDevido: z.number(),

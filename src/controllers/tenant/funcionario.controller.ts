@@ -9,19 +9,27 @@ import { FuncionarioService } from '../../services/tenant/funcionario.service';
 const service = new FuncionarioService();
 
 //======================================criar funcionario=================================
+// src/controllers/tenant/funcionario.controller.ts
 export const createFuncionario = async (req: Request, res: Response, next: NextFunction) => {
-  console.log('[CONTROLLER CREATE FUNCIONARIO] Iniciando criação');
-  console.log('[CONTROLLER CREATE FUNCIONARIO] Body recebido:', JSON.stringify(req.body, null, 2));
-
   try {
     const escolinhaId = req.escolinhaId!;
-    const data = createFuncionarioSchema.parse(req.body);
+    const fotoFile = req.file;
 
-    console.log('[CONTROLLER CREATE FUNCIONARIO] Dados validados:', JSON.stringify(data, null, 2));
+    console.log('=== [CONTROLLER] Foto recebida:', fotoFile ? fotoFile.originalname : 'Nenhuma');
 
-    const result = await service.create(escolinhaId, data);
+    // Conversão correta dos dados
+    const data = {
+      nome: req.body.nome?.trim(),
+      cargo: req.body.cargo,
+      salario: req.body.salario ? parseFloat(req.body.salario) : undefined,
+      telefone: req.body.telefone?.trim(),
+      cpf: req.body.cpf ? req.body.cpf.replace(/\D/g, '') : null,
+      email: req.body.email?.trim().toLowerCase(),
+      observacoes: req.body.observacoes?.trim() || null,
+      password: req.body.password,
+    };
 
-    console.log('[CONTROLLER CREATE FUNCIONARIO] Resultado:', JSON.stringify(result, null, 2));
+    const result = await service.create(escolinhaId, data, fotoFile);
 
     res.status(201).json({
       success: true,
@@ -29,16 +37,10 @@ export const createFuncionario = async (req: Request, res: Response, next: NextF
       data: result.funcionario,
       senhaTemporaria: result.senhaTemporaria,
     });
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues,
-      });
-    }
 
-    console.error('[CREATE FUNCIONARIO] Erro:', error);
-    res.status(500).json({ error: 'Erro interno ao criar funcionário' });
+  } catch (error: any) {
+    console.error('[CONTROLLER CREATE FUNCIONARIO] Erro:', error);
+    next(error); // Deixa o error middleware tratar
   }
 };
 

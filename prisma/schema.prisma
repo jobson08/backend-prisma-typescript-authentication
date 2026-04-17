@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -186,11 +186,12 @@ model Escolinha {
 model Funcionario {
   id          String  @id @default(uuid())
   nome        String
+  cpf         String? @unique
   cargo       String
   salario     Float?
   fotoUrl     String?
   telefone    String?
-  email       String? @unique
+  email       String  @unique
   observacoes String?
 
   createdAt DateTime @default(now())

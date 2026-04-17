@@ -49,7 +49,7 @@ const upload = multer({
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
 
 //----------------------------Rotas Funcionario (protegidos por ADMIN do tenant)---------------------
-router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, createFuncionario);
+router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), upload.single("foto"), tenantGuard, createFuncionario);
 router.get('/funcionarios', authMiddleware, roleGuard('ADMIN'), tenantGuard, listFuncionarios);
 router.get('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getFuncionarioById);
 router.put('/funcionarios/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, updateFuncionario);
@@ -58,9 +58,9 @@ router.post('/funcionarios/:id/redefinir-senha', authMiddleware, roleGuard('ADMI
 router.get('/funcionarios-treinadores', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinadoresController);
 
 // -----------------------Responsáveis (protegidos por ADMIN do tenant)-----------------------------
-router.get('/responsaveis', authMiddleware, roleGuard('ADMIN'), listResponsaveis);
+router.post('/responsaveis', authMiddleware, roleGuard('ADMIN'), upload.single("foto"), createResponsavel);
+router.get('/responsaveis', authMiddleware, roleGuard('ADMIN'),  listResponsaveis);
 router.get('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), getResponsavelById);
-router.post('/responsaveis', authMiddleware, roleGuard('ADMIN'), createResponsavel);
 router.put('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.patch('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), updateResponsavel);
 router.delete('/responsaveis/:id', authMiddleware, roleGuard('ADMIN'), deleteResponsavel);

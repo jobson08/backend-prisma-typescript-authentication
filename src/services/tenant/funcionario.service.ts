@@ -2,10 +2,11 @@
 import { prisma } from '../../server';
 import { CreateFuncionarioDto, UpdateFuncionarioDto } from '../../dto/tenant/funcionario.dto';
 import bcrypt from 'bcrypt';
+import cloudinary from '../../config/cloudinary';
 import { AppError } from '../../utils/AppError';
 
 export class FuncionarioService {
-async create(escolinhaId: string, data: CreateFuncionarioDto) {
+async create(escolinhaId: string, data: any, fotoFile?: Express.Multer.File) {
   console.log('[SERVICE CREATE FUNCIONARIO] Dados recebidos:', JSON.stringify(data, null, 2));
   console.log('[SERVICE CREATE FUNCIONARIO] escolinhaId:', escolinhaId);
 
@@ -20,6 +21,32 @@ async create(escolinhaId: string, data: CreateFuncionarioDto) {
     throw new AppError('E-mail já cadastrado', 409);
   }
 
+  let fotoUrl: string | null = null;
+// ====================== UPLOAD PARA CLOUDINARY ======================
+  if (fotoFile) {
+    try {
+      console.log('[SERVICE] Iniciando upload da foto para Cloudinary...');
+
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${fotoFile.mimetype};base64,${fotoFile.buffer.toString('base64')}`,
+        {
+          folder: `edupay/${escolinhaId}/funcionarios`,
+          transformation: [{ width: 800, height: 800, crop: 'limit' }],
+          resource_type: "image",
+        }
+      );
+
+      fotoUrl = uploadResult.secure_url;
+      console.log('[SERVICE] ✅ Foto enviada com sucesso para Cloudinary:', fotoUrl);
+    } catch (uploadError: any) {
+      console.error('[SERVICE] ❌ Erro ao fazer upload para Cloudinary:', uploadError.message || uploadError);
+      // Não interrompe o cadastro se o upload falhar
+    }
+  } else {
+    console.log('[SERVICE] Nenhuma foto foi enviada');
+  }
+
+   // ====================== CRIAÇÃO DO FUNCIONARIO ======================
   const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
   const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
 
@@ -35,18 +62,19 @@ async create(escolinhaId: string, data: CreateFuncionarioDto) {
     });
 
     const funcionario = await tx.funcionario.create({
-      data: {
-        nome: data.nome,
-        cargo: data.cargo,
-        salario: data.salario,
-        telefone: data.telefone,
-        observacoes: data.observacoes,
-        fotoUrl: data.fotoUrl,
-        email: emailLower,
-        escolinhaId,
-        userId: user.id,  // ← já tem isso, correto
-      },
-    });
+    data: {
+    nome: data.nome,
+    cpf: data.cpf,                    // agora vai existir
+    cargo: data.cargo,
+    salario: data.salario,            // já está como number (2000)
+    telefone: data.telefone,
+    observacoes: data.observacoes,
+    email: emailLower,
+    escolinhaId,
+    userId: user.id,
+    fotoUrl,
+  },
+});
 
     // ← ESSA LINHA É A QUE FALTAVA (completa o lado inverso)
     await tx.user.update({
@@ -84,8 +112,7 @@ async create(escolinhaId: string, data: CreateFuncionarioDto) {
 
 async update(escolinhaId: string, id: string, data: UpdateFuncionarioDto) {
     console.log('[SERVICE UPDATE FUNCIONARIO] Iniciando atualização - ID:', id);
-    console.log('[SERVICE UPDATE FUNCIONARIO] Dados recebidos:', JSON.stringify(data, null, 2));
-
+   
     // Busca com user incluído
     const funcionario = await prisma.funcionario.findFirst({
       where: { id, escolinhaId },
@@ -99,11 +126,12 @@ async update(escolinhaId: string, id: string, data: UpdateFuncionarioDto) {
     const updateData: any = {};
 
     if (data.nome !== undefined) updateData.nome = data.nome.trim();
+    if (data.cpf !== undefined) updateData.cpf = data.cpf.replace(/\D/g, '') || null;
     if (data.telefone !== undefined) updateData.telefone = data.telefone?.trim() || null;
     if (data.cargo !== undefined) updateData.cargo = data.cargo;
     if (data.salario !== undefined) updateData.salario = data.salario;
     if (data.observacoes !== undefined) updateData.observacoes = data.observacoes?.trim() || null;
-    if (data.fotoUrl !== undefined) updateData.fotoUrl = data.fotoUrl?.trim() || null;
+    //if (data.fotoUrl !== undefined) updateData.fotoUrl = data.fotoUrl?.trim() || null;
 
     // Atualização de email
     let emailAtualizado = false;
@@ -167,15 +195,22 @@ async update(escolinhaId: string, id: string, data: UpdateFuncionarioDto) {
       where: { id, escolinhaId },
     });
 
-    if (!funcionario) {
-      throw new Error('Funcionário não encontrado');
-    }
+    if (!funcionario) throw new AppError('Funcionário não encontrado', 404);
 
-    await prisma.funcionario.delete({ where: { id } });
+    return prisma.$transaction(async (tx) => {
+      // 1. Deletar User primeiro (lado da FK)
+      if (funcionario.userId) {
+        await tx.user.delete({ where: { id: funcionario.userId } });
+      }
 
-    // Opcional: remover User associado (se desejar)
-     if (funcionario.userId) {
-       await prisma.user.delete({ where: { id: funcionario.userId } });
-     }
+      // 2. Depois deletar Funcionário
+      await tx.funcionario.delete({ where: { id } });
+
+      // 3. (Opcional) Deletar foto do Cloudinary
+      if (funcionario.fotoUrl) {
+        const publicId = funcionario.fotoUrl.split('/').slice(-2).join('/').split('.')[0];
+        await cloudinary.uploader.destroy(publicId).catch(() => {});
+      }
+    });
   }
 }

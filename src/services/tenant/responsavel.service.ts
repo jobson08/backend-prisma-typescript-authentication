@@ -2,10 +2,10 @@
 import { prisma } from '../../server';
 import bcrypt from 'bcrypt';
 import { CreateResponsavelDto, UpdateResponsavelDto } from '../../dto/tenant/responsavel.dto';
+import cloudinary from '../../config/cloudinary';
 import { AppError } from '../../utils/AppError';
-
 export class ResponsavelService {
-async create(escolinhaId: string, data: CreateResponsavelDto) {
+async create(escolinhaId: string, data: any, fotoFile?: Express.Multer.File) {
   console.log('[SERVICE CREATE RESPONSAVEL] Dados recebidos:', JSON.stringify(data, null, 2));
   console.log('[SERVICE CREATE RESPONSAVEL] escolinhaId:', escolinhaId);
 
@@ -21,6 +21,32 @@ async create(escolinhaId: string, data: CreateResponsavelDto) {
     throw new AppError('E-mail já cadastrado', 409);
   }
 
+    let fotoUrl: string | null = null;
+// ====================== UPLOAD PARA CLOUDINARY ======================
+  if (fotoFile) {
+    try {
+      console.log('[SERVICE] Iniciando upload da foto para Cloudinary...');
+
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${fotoFile.mimetype};base64,${fotoFile.buffer.toString('base64')}`,
+        {
+          folder: `edupay/${escolinhaId}/responsavel`,
+          transformation: [{ width: 800, height: 800, crop: 'limit' }],
+          resource_type: "image",
+        }
+      );
+
+      fotoUrl = uploadResult.secure_url;
+      console.log('[SERVICE] ✅ Foto enviada com sucesso para Cloudinary:', fotoUrl);
+    } catch (uploadError: any) {
+      console.error('[SERVICE] ❌ Erro ao fazer upload para Cloudinary:', uploadError.message || uploadError);
+      // Não interrompe o cadastro se o upload falhar
+    }
+  } else {
+    console.log('[SERVICE] Nenhuma foto foi enviada');
+  }
+
+   // ====================== CRIAÇÃO DO FUNCIONARIO ======================
   // Gera senha temporária (automática se não vier no payload)
   const senhaTemporaria = data.password || Math.random().toString(36).slice(-12) + '!@#';
   const hashedPassword = await bcrypt.hash(senhaTemporaria, 10);
@@ -50,7 +76,7 @@ async create(escolinhaId: string, data: CreateResponsavelDto) {
         cpf: data.cpf ?? null,
         email: data.email ?? null,
         telefone: data.telefone ?? null,
-        fotoUrl: null,  // se quiser suporte a foto, adicione no DTO
+        fotoUrl,// se quiser suporte a foto, adicione no DTO
         observacoes: data.observacoes ?? null,
         escolinhaId,
         userId: user.id,  // Vincula responsavel → user
@@ -106,7 +132,7 @@ async create(escolinhaId: string, data: CreateResponsavelDto) {
 // src/services/tenant/responsavel.service.ts
 async update(escolinhaId: string, id: string, data: UpdateResponsavelDto) {
   console.log('[SERVICE UPDATE RESPONSAVEL] Iniciando atualização - ID:', id);
-  console.log('[SERVICE UPDATE RESPONSAVEL] Dados recebidos:', JSON.stringify(data, null, 2));
+
 
   // Busca com user incluído
   const responsavel = await prisma.responsavel.findFirst({
@@ -125,7 +151,7 @@ async update(escolinhaId: string, id: string, data: UpdateResponsavelDto) {
   if (data.cpf !== undefined) updateData.cpf = data.cpf?.replace(/\D/g, '') || null;
   if (data.telefone !== undefined) updateData.telefone = data.telefone?.replace(/\D/g, '') || null;
   if (data.observacoes !== undefined) updateData.observacoes = data.observacoes?.trim() || null;
-  if (data.fotoUrl !== undefined) updateData.fotoUrl = data.fotoUrl?.trim() || null;
+  //if (data.fotoUrl !== undefined) updateData.fotoUrl = data.fotoUrl?.trim() || null;
 
   // Atualização de email
   let emailAtualizado = false;

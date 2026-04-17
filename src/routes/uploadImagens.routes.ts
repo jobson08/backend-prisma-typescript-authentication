@@ -8,7 +8,6 @@ import cloudinary from '../config/cloudinary';
 
 const router = Router();
 
-// Configuração do multer
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -38,32 +37,41 @@ router.post(
         return res.status(400).json({ error: 'Nenhum arquivo enviado' });
       }
 
-      let folderPath = `edupay/${entity}`;
+      let folderPath = `edupay/${req.escolinhaId}/${entity}`;
 
-      // Organização especial para alunos
+      // Configurações específicas por entidade
       if (entity === 'aluno-futebol' && id) {
-        folderPath = `edupay/${req.escolinhaId}/aluno-futebol`;        // ← Alterado aqui
+        folderPath = `edupay/${req.escolinhaId}/aluno-futebol`;
       } else if (entity === 'aluno-crossfit' && id) {
         folderPath = `edupay/${req.escolinhaId}/aluno-crossfit`;
       } else if (entity === 'escolinha' && !id) {
         folderPath = `edupay/${req.escolinhaId}/escolinha`;
       } else if (entity === 'crossfit-banner' && !id) {
         folderPath = `edupay/${req.escolinhaId}/crossfit-banner`;
+      } 
+      // ← Funcionário
+      else if (entity === 'funcionario' && id) {
+        folderPath = `edupay/${req.escolinhaId}/funcionarios`;
+      }
+     // ← responsavel
+       else if (entity === 'responsavel' && id) {
+        folderPath = `edupay/${req.escolinhaId}/responsavel`;
       }
 
-      console.log(`[UPLOAD] Usando pasta: ${folderPath}`);
+      console.log(`[UPLOAD] Entidade: ${entity} | ID: ${id} | Pasta: ${folderPath}`);
 
       const result = await cloudinary.uploader.upload(
         `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
         {
           folder: folderPath,
           transformation: [{ width: 800, height: 800, crop: 'limit' }],
+          resource_type: "image",
         }
       );
 
       const url = result.secure_url;
 
-      // Atualiza banco
+      // ==================== ATUALIZAÇÃO NO BANCO ====================
       if (entity === 'escolinha' && !id) {
         await prisma.escolinha.update({
           where: { id: req.escolinhaId! },
@@ -84,12 +92,30 @@ router.post(
           where: { id },
           data: { fotoUrl: url },
         });
+      } 
+      // ← NOVO: Funcionário
+      else if (entity === 'funcionario' && id) {
+        await prisma.funcionario.update({
+          where: { id },
+          data: { fotoUrl: url },
+        });
+      }
+        // ← NOVO: responsavel
+      else if (entity === 'responsavel' && id) {
+        await prisma.responsavel.update({
+          where: { id },
+          data: { fotoUrl: url },
+        });
       }
 
-      return res.json({ success: true, url });
+      return res.json({ 
+        success: true, 
+        url,
+        message: 'Imagem enviada com sucesso'
+      });
     } catch (err: any) {
       console.error('[UPLOAD ERROR]', err);
-      return res.status(500).json({ error: 'Erro ao fazer upload' });
+      return res.status(500).json({ error: 'Erro ao fazer upload da imagem' });
     }
   }
 );
@@ -131,9 +157,26 @@ router.delete(
           where: { id },
           data: { fotoUrl: null },
         });
+      } 
+      // ← NOVO: Funcionário
+      else if (entity === 'funcionario' && id) {
+        await prisma.funcionario.update({
+          where: { id },
+          data: { fotoUrl: null },
+        });
+      }
+          // ← NOVO: responsavel
+      else if (entity === 'responsavel' && id) {
+        await prisma.responsavel.update({
+          where: { id },
+          data: { fotoUrl: null },
+        });
       }
 
-      return res.json({ success: true, message: 'Imagem removida com sucesso' });
+      return res.json({ 
+        success: true, 
+        message: 'Imagem removida com sucesso' 
+      });
     } catch (err: any) {
       console.error('[DELETE IMAGE ERROR]', err);
       return res.status(500).json({ error: 'Erro ao deletar imagem' });

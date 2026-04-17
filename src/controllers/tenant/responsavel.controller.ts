@@ -14,13 +14,22 @@ export const createResponsavel = async (req: Request, res: Response) => {
 
   try {
     const escolinhaId = req.escolinhaId!;
-    const data = createResponsavelSchema.parse(req.body);
+       const fotoFile = req.file;
 
-    console.log('[CONTROLLER CREATE RESPONSAVEL] Dados validados:', JSON.stringify(data, null, 2));
+    console.log('=== [CONTROLLER] Foto recebida:', fotoFile ? fotoFile.originalname : 'Nenhuma');
 
-    const result = await service.create(escolinhaId, data);
+      const data = {
+      nome: req.body.nome?.trim(),
+      telefone: req.body.telefone?.trim(),
+      cpf: req.body.cpf ? req.body.cpf.replace(/\D/g, '') : null,
+      email: req.body.email?.trim().toLowerCase(),
+      observacoes: req.body.observacoes?.trim() || null,
+      password: req.body.password,
+    };
 
-    console.log('[CONTROLLER CREATE RESPONSAVEL] Resultado:', JSON.stringify(result, null, 2));
+
+    const result = await service.create(escolinhaId, data, fotoFile);
+
 
     res.status(201).json({
       success: true,

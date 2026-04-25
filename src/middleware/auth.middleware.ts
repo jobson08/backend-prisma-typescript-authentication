@@ -23,8 +23,10 @@ export interface AuthUser {
   email: string;
   name: string | null;
   role: UserRole;
-  tenantId: string | null; // você já tem como alias
-  escolinhaId: string | null; // ← ADICIONE AQUI (campo direto)
+  tenantId: string | null;
+  escolinhaId: string | null;
+  alunoFutebolId?: string;     // ← ADICIONADO
+  alunoCrossfitId?: string;    // ← opcional para futuro
   escolinha?: {
     id: string;
     nome: string;
@@ -51,7 +53,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { id: string; exp: number; iat: number };
 
-    const user = await prisma.user.findUnique({
+   const user = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {
         id: true,
@@ -59,7 +61,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         name: true,
         role: true,
         img: true,
-        escolinhaId: true, // ← CAMPO CORRETO DO SCHEMA!
+        escolinhaId: true,
         escolinha: {
           select: {
             id: true,
@@ -67,31 +69,40 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
             logoUrl: true,
           },
         },
+        // Busca relação com AlunoFutebol
+        alunoFutebol: {
+          select: { id: true }
+        },
       },
     });
-
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado' });
     }
 
     // Monta req.user (tenantId continua sendo o nome lógico)
-  req.user = {
-  id: user.id,
-  email: user.email,
-  name: user.name,
-  role: user.role as UserRole,
-  tenantId: user.escolinhaId, // já está bom como alias
-  escolinhaId: user.escolinhaId, // ← ADICIONE AQUI (campo direto)
-  escolinha: user.escolinha
-    ? {
+    // Monta req.user
+    req.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      tenantId: user.escolinhaId,
+      escolinhaId: user.escolinhaId,
+      alunoFutebolId: user.alunoFutebol?.id,
+      escolinha: user.escolinha ? {
         id: user.escolinha.id,
         nome: user.escolinha.nome,
         logoUrl: user.escolinha.logoUrl,
-      }
-    : null,
-};
+      } : null,
+    };
 
-    next();
+    console.log("✅ [Auth Middleware] Usuário carregado com sucesso:", {
+      id: req.user.id,
+      role: req.user.role,
+      alunoFutebolId: req.user.alunoFutebolId
+    });
+
+    next();  // ← Garanta que next() está sendo chamado
   } catch (error) {
     console.error('Erro na autenticação:', error);
     return res.status(401).json({ error: 'Token inválido ou expirado' });

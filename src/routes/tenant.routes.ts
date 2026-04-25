@@ -1,7 +1,7 @@
 // src/routes/tenant.routes.ts
 import { Router } from 'express';
 import multer from "multer";
-
+import { Request, Response } from 'express';
 import uploadImagensRoutes from './uploadImagens.routes';
 
 import { authMiddleware, roleGuard } from '../middleware/auth.middleware';
@@ -17,6 +17,7 @@ import { createTreinoFutebolController, getTreinoByIdController, listTreinosFute
 import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listByAlunoFutebol, deletePagamentoFutebol} from '../controllers/tenant/pagamentos-futebol.controller';
 //import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 
+import * as alunoFutebolController from '../controllers/tenant/alunoFutebolUser.controller';
 import { FinanceiroMensalQuerySchema } from '../dto/tenant/financeiro.dto';
 import { InadimplentesQuerySchema } from '../dto/tenant/inadimplentes.dto';
 import { createManualCrossfit, deletePagamentoCrossfit, generateAutomaticCrossfit, listByAlunoCrossfit } from '../controllers/tenant/pagamentos-crossfit.controller';
@@ -44,6 +45,47 @@ const upload = multer({
     }
   },
 });
+
+// ==================== ROTAS PARA DASHBOARD USER DO ALUNO FUTEBOL ====================
+
+// Perfil do aluno logado
+router.get('/aluno-futebol/me', 
+  authMiddleware, 
+ // tenantGuard, 
+  alunoFutebolController.getMeuPerfil
+);
+
+// Próximos treinos do aluno logado
+router.get('/aluno-futebol/proximos-treinos', 
+  authMiddleware, 
+ // tenantGuard, 
+  alunoFutebolController.getProximosTreinos
+);
+
+// Estatísticas do aluno
+router.get('/aluno-futebol/estatisticas', 
+  authMiddleware, 
+  //tenantGuard, 
+  alunoFutebolController.getEstatisticas
+);
+
+// Trocar senha do aluno
+router.post('/aluno-futebol/trocar-senha', 
+  authMiddleware, 
+  //tenantGuard, 
+  alunoFutebolController.trocarSenhaAluno
+);
+
+router.get('/aluno-futebol/presencas', 
+  authMiddleware, 
+  alunoFutebolController.getPresencas
+);
+
+router.get('/aluno-futebol/avaliacoes', 
+  authMiddleware, 
+  alunoFutebolController.getAvaliacoes
+);
+
 
 //----------------------------- Proteção: só ADMIN da escolinha pode acessar essas rotas-----------------
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
@@ -83,7 +125,6 @@ router.put('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), updateAlun
 router.delete('/alunos-crossfit/:id',authMiddleware, roleGuard('ADMIN'), deleteAlunoCrossfit);
 router.post('/alunos-crossfit/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaAlunoCrossfit);
 
-
 //---------------------------------------treinios Dashboar ------------------------------------------
 router.post('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, createTreinoFutebolController);
 router.get('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinosFutebolController);
@@ -97,6 +138,7 @@ router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDas
 router.get('/alunos-inadimplentes', authMiddleware, roleGuard('ADMIN'), getAlunosInadimplentes);
 //rotas todos alunos aniversariantes-semana
 router.get('/aniversariantes-semana', authMiddleware, roleGuard('ADMIN'), getAniversariantesSemana);
+
 
 
 //-------------------------------ROTAS DE PAGAMENTO ALUNO FUTEBOL---------------------------

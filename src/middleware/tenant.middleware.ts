@@ -6,17 +6,24 @@ export const tenantGuard = (req: Request, res: Response, next: NextFunction) => 
     return res.status(401).json({ error: 'Não autenticado' });
   }
 
-  // SUPERADMIN pode acessar sem escolinhaId (global)
+  // SUPERADMIN pode acessar tudo
   if (req.user.role === 'SUPERADMIN') {
     return next();
   }
 
+  // ALUNOS e RESPONSÁVEIS podem acessar
+  if (['ALUNO_FUTEBOL', 'ALUNO_CROSSFIT', 'RESPONSAVEL'].includes(req.user.role)) {
+    req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
+    return next();
+  }
+
   // Para ADMIN e outros roles, exige escolinhaId
-  if (!req.user.escolinhaId) {
+  if (!req.user.escolinhaId && !req.user.tenantId) {
     return res.status(403).json({ error: 'Usuário não associado a nenhuma escolinha' });
   }
 
-  // Injeta no request para uso nos controllers
-  req.escolinhaId = req.user.escolinhaId;
+  // Injeta o ID da escolinha
+  req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
+
   next();
 };

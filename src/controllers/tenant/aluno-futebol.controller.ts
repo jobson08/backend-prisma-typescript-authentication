@@ -4,6 +4,7 @@ import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
 import { createAlunoFutebolSchema, updateAlunoFutebolSchema } from '../../dto/tenant/aluno-futebol.dto';
 import { AlunoFutebolService } from '../../services/tenant/aluno-futebol.service';
+import { AppError } from '../../utils/AppError';
 
 
 
@@ -219,5 +220,32 @@ export const listAlunosByCategoria = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[listAlunosByCategoria] Erro:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+// busacar trinos por mes do aluno usuario
+
+export const getTreinosMes = async (req: Request, res: Response) => {
+  try {
+    const alunoId = req.user?.alunoFutebolId;
+    const { mes } = req.query;
+
+    if (!alunoId) {
+      throw new AppError('ID do aluno não encontrado no token', 403);
+    }
+
+    if (!mes || typeof mes !== 'string') {
+      throw new AppError('Parâmetro "mes" (YYYY-MM) é obrigatório', 400);
+    }
+
+    const treinos = await service.getTreinosMes(req.escolinhaId!, alunoId, mes);
+
+    return res.status(200).json({
+      success: true,
+      data: treinos,
+    });
+  } catch (error: any) {
+    console.error('[getTreinosMes] Erro:', error);
+    return res.status(error.status || 500).json({ error: error.message });
   }
 };

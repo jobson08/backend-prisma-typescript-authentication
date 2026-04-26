@@ -197,6 +197,64 @@ async update(escolinhaId: string, id: string, data: UpdateAlunoFutebolDto) {
   return alunoAtualizado;
 }
 
+// Rota de usuario verificar seus trinos por mes
+
+async getTreinosMes(escolinhaId: string, alunoId: string, mes: string) {
+  try {
+    const [ano, mesNum] = mes.split('-').map(Number);
+    const dataInicio = new Date(ano, mesNum - 1, 1);
+    const dataFim = new Date(ano, mesNum, 0); // último dia do mês
+
+    // Busca o aluno para pegar sua categoria
+    const aluno = await prisma.alunoFutebol.findUnique({
+      where: { id: alunoId },
+      select: { categoria: true }
+    });
+
+    if (!aluno) throw new AppError('Aluno não encontrado', 404);
+
+    // Busca treinos recorrentes da mesma categoria
+    const treinosRecorrentes = await prisma.treinoRecorrente.findMany({
+      where: {
+        escolinhaId,
+        categoria: aluno.categoria,
+        ativo: true,
+      },
+      include: {
+        funcionarioTreinador: {
+          select: { nome: true }
+        }
+      }
+    });
+
+    const treinosGerados = [];
+
+    for (let d = new Date(dataInicio); d <= dataFim; d.setDate(d.getDate() + 1)) {
+      const diaSemana = d.getDay();
+
+      const treinoDoDia = treinosRecorrentes.find(t => t.diasSemana.includes(diaSemana));
+
+      if (treinoDoDia) {
+        treinosGerados.push({
+          id: `treino-${d.toISOString()}`,
+          data: d.toISOString().split('T')[0],
+          nome: treinoDoDia.nome,
+          horaInicio: treinoDoDia.horaInicio,
+          horaFim: treinoDoDia.horaFim,
+          local: treinoDoDia.local,
+          treinador: treinoDoDia.funcionarioTreinador?.nome || 'Treinador',
+          status: 'confirmado'
+        });
+      }
+    }
+
+    return treinosGerados;
+  } catch (error) {
+    console.error("Erro getTreinosMes:", error);
+    throw error;
+  }
+}
+
   async delete(escolinhaId: string, id: string) {
   const aluno = await prisma.alunoFutebol.findFirst({
     where: {

@@ -9,11 +9,13 @@ import { tenantGuard } from '../middleware/tenant.middleware'; // middleware que
 import { createFuncionario, deleteFuncionario, getFuncionarioById, listFuncionarios, updateFuncionario, listTreinadoresController, redefinirSenhaFuncionario } from '../controllers/tenant/funcionario.controller';
 import { createOrUpdateLogin } from '../controllers/createOrUpdateLogin';
 import { createResponsavel, deleteResponsavel, getResponsavelById, listResponsaveis, updateResponsavel, redefinirSenhaResponsavel } from '../controllers/tenant/responsavel.controller';
-import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno } from '../controllers/tenant/aluno-futebol.controller';
+import { createAluno, deleteAluno, getAlunoById, listAlunos, updateAluno, redefinirSenhaAluno, listAlunosByCategoria } from '../controllers/tenant/aluno-futebol.controller';
 import { createAlunoCrossfit, deleteAlunoCrossfit, getAlunoCrossfitById, listAlunosCrossfit, updateAlunoCrossfit, redefinirSenhaAlunoCrossfit, criarTurma, atualizarTurma, listarTurmas, inscreverAluno, atualizarInscricao, excluirInscricao, listarInscricoes, excluirTurma, toggleCrossfitActivation } from '../controllers/tenant/aluno-crossfit.controller';
 import { getAlunosInadimplentes, getAniversariantesSemana, getDashboardTenant } from '../controllers/tenant/dashboard-tenant.controller';
 import { pagamentosController } from '../controllers/tenant/pagamentos.controlle';
-import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController} from '../controllers/tenant/treinos-futebol.controller';
+import { createTreinoFutebolController, getTreinoByIdController, listTreinosFutebolController, editeTreinoFutebolController, getProximasAulasSemanaController, deleteTreino} from '../controllers/tenant/treinos-futebol.controller';
+//import { createTreinoRecorrente, listTreinosRecorrentes, generateTreinosMes } from '../controllers/tenant/treinoRecorrenteController';
+
 import { createPagamentoManualFutebol, generatePagamentoAutomaticFutebol, listByAlunoFutebol, deletePagamentoFutebol} from '../controllers/tenant/pagamentos-futebol.controller';
 //import { pagamentosFutebolController} from '../controllers/tenant/pagamentos-futebol.controller';
 
@@ -28,6 +30,7 @@ import { aulaExtraAlunoController } from '../controllers/tenant/aula-extra-aluno
 import { getFinanceiroMensalController } from '../controllers/tenant/financeiro.controller';
 import { validate } from '../middleware/validate';
 import { getInadimplentesController } from '../controllers/tenant/inadimplentes.controller';
+import { createTreinoRecorrente, generateTreinosMes, getTreinoRecorrenteById, listTreinosRecorrentes, updateTreinoRecorrente, deleteTreinoRecorrente } from '../controllers/tenant/treinoRecorrente.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
 const router = Router();
@@ -112,6 +115,7 @@ router.post("/alunos", authMiddleware, roleGuard('ADMIN'), upload.single("foto")
 router.put('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.patch('/alunos/:id', authMiddleware, roleGuard('ADMIN'), updateAluno);
 router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunos);
+router.get('/alunos', authMiddleware, roleGuard('ADMIN'), listAlunosByCategoria);
 router.get('/alunos/:id', authMiddleware, roleGuard('ADMIN'), getAlunoById);
 router.delete('/alunos/:id', authMiddleware, roleGuard('ADMIN'), deleteAluno);
 router.post('/alunos/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaAluno);
@@ -130,7 +134,52 @@ router.post('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard,
 router.get('/treinos-futebol', authMiddleware, roleGuard('ADMIN'), tenantGuard, listTreinosFutebolController);
 router.get('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, getTreinoByIdController);
 router.put('/treinos-futebol/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, editeTreinoFutebolController);
-router.get('/proximas-aulas-semana',authMiddleware, roleGuard('ADMIN'),tenantGuard,getProximasAulasSemanaController);
+router.get('/proximas-aulas-semana',authMiddleware, roleGuard('ADMIN'),tenantGuard, getProximasAulasSemanaController);
+router.delete('/treinos-futebol/:id',authMiddleware, roleGuard('ADMIN'),tenantGuard, deleteTreino);
+
+// Rotas de Treino Recorrente
+router.post('/treinos-recorrentes', 
+  authMiddleware, 
+  roleGuard('ADMIN'), 
+  tenantGuard, 
+ createTreinoRecorrente
+);
+
+router.get('/treinos-recorrentes', 
+  authMiddleware, 
+  tenantGuard, 
+listTreinosRecorrentes
+);
+
+// Detalhes de Treino Recorrente
+router.get('/treinos-recorrentes/:id', 
+  authMiddleware, 
+  tenantGuard, 
+ getTreinoRecorrenteById
+);
+
+router.get('/treinos-gerados-mes', 
+  authMiddleware, 
+  tenantGuard, 
+  generateTreinosMes
+);
+
+router.put('/treinos-recorrentes/:id', 
+  authMiddleware, 
+  tenantGuard, 
+  updateTreinoRecorrente
+);
+
+// Excluir Treino Recorrente
+router.delete('/treinos-recorrentes/:id', 
+  authMiddleware, 
+  roleGuard('ADMIN'), 
+  tenantGuard, 
+  deleteTreinoRecorrente
+);
+
+
+
 
 // Rota dashboard 
 router.get('/dashboard', authMiddleware, roleGuard('ADMIN'), tenantGuard, getDashboardTenant);

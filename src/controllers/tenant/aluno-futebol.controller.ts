@@ -180,3 +180,44 @@ export const deleteAluno = async (req: Request, res: Response) => {
     res.status(404).json({ error: error.message || "Aluno não encontrado" });
   }
 };
+
+// Rota de buscar alunos por categoria
+
+export const listAlunosByCategoria = async (req: Request, res: Response) => {
+  try {
+    const { categoria } = req.query;
+
+    const alunos = await prisma.alunoFutebol.findMany({
+      where: {
+        escolinhaId: req.escolinhaId!,
+        categoria: categoria as string,
+        status: 'ativo' // só alunos ativos
+      },
+      select: {
+        id: true,
+        nome: true,
+        dataNascimento: true,
+        categoria: true,
+      },
+      orderBy: { nome: 'asc' }
+    });
+
+    // Calcula idade aproximada
+    const alunosComIdade = alunos.map(aluno => ({
+      id: aluno.id,
+      nome: aluno.nome,
+      idade: aluno.dataNascimento 
+        ? Math.floor((new Date().getTime() - new Date(aluno.dataNascimento).getTime()) / (31536000000))
+        : null,
+      categoria: aluno.categoria,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: alunosComIdade,
+    });
+  } catch (error: any) {
+    console.error('[listAlunosByCategoria] Erro:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};

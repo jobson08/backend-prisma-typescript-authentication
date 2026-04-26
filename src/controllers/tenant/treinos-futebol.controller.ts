@@ -194,3 +194,19 @@ export const getProximasAulasSemanaController = async (req: Request, res: Respon
     });
   }
 };
+
+export const deleteTreino = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    await service.delete(id, req.escolinhaId!);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Treino excluído com sucesso'
+    });
+  } catch (error: any) {
+    console.error('[deleteTreino] Erro:', error);
+    return res.status(error.status || 500).json({ error: error.message });
+  }
+};

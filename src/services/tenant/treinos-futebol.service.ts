@@ -39,5 +39,26 @@ export class TreinosFutebolService {
     });
   }
 
+  async delete(id: string, escolinhaId: string): Promise<void> {
+  const treino = await prisma.treino.findFirst({
+    where: { 
+      id, 
+      escolinhaId 
+    }
+  });
+
+  if (!treino) {
+    throw new AppError('Treino  não encontrado', 404);
+  }
+
+  // Soft delete (recomendado)
+  await prisma.treino.update({
+    where: { id },
+    data: { ativo: false }
+  });
+
+  // Ou hard delete (se preferir remover definitivamente):
+  // await prisma.treinoRecorrente.delete({ where: { id } });
+}
   // Se precisar de update, delete, get by id...
 }

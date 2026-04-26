@@ -169,6 +169,7 @@ model Escolinha {
   funcionarios         Funcionario[]
   responsaveis         Responsavel[]
   treinos              Treino[]
+  treinosRecorente     TreinoRecorrente[]
   aulasExtras          AulaExtra[]
   mensalidadesFutebol  MensalidadeFutebol[]
   mensalidadesCrossfit MensalidadeCrossfit[]
@@ -203,11 +204,12 @@ model Funcionario {
   userId String? @unique // ← FK simples + @unique (sem @relation aqui!)
   // NÃO coloque user User? @relation(...) aqui — Prisma infere automaticamente
 
-  treinos      Treino[]
-  avaliacoes   Avaliacao[]
-  inscricoes   AulaExtraAluno[]
-  aulaCrossfit AulaCrossfit[]
-  user         User?
+  treinos          Treino[]
+  treinosRecorente TreinoRecorrente[]
+  avaliacoes       Avaliacao[]
+  inscricoes       AulaExtraAluno[]
+  aulaCrossfit     AulaCrossfit[]
+  user             User?
 }
 
 // ==================== ALUNO FUTEBOL ====================
@@ -426,6 +428,9 @@ model Treino {
   updatedAt DateTime @updatedAt
 
   // Relações
+  treinoRecorrenteId String?
+  treinoRecorrente   TreinoRecorrente? @relation(fields: [treinoRecorrenteId], references: [id])
+
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
   escolinhaId String
 
@@ -433,6 +438,33 @@ model Treino {
   funcionarioTreinadorId String
 
   presencas Presenca[]
+}
+
+//===================== TREINOS RECORRENTES====================
+model TreinoRecorrente {
+  id         String  @id @default(uuid())
+  nome       String
+  descricao  String?
+  categoria  String // Ex: "Sub-9", "Sub-11", etc.
+  diasSemana Int[] // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  horaInicio String
+  horaFim    String
+  local      String
+  ativo      Boolean @default(true)
+
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  funcionarioTreinadorId String
+  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
+
+  // Treinos gerados automaticamente a partir deste padrão
+  treinos Treino[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([escolinhaId, categoria, diasSemana])
 }
 
 // ==================== PRESENÇA FUTEBOL ====================

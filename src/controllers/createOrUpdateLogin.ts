@@ -36,6 +36,10 @@ export const createOrUpdateLogin = async (req: Request, res: Response) => {
           if (existingUser.responsavelId && existingUser.responsavelId !== entityId) {
             return res.status(400).json({ error: "E-mail já vinculado a outro responsável" });
           }
+           case 'treinador':
+          if (existingUser.treinadorId && existingUser.treinadorId !== entityId) {
+            return res.status(400).json({ error: "E-mail já vinculado a outro treinador" });
+          }
           break;
         default:
           return res.status(400).json({ error: "Tipo de entidade inválido" });
@@ -64,6 +68,7 @@ export const createOrUpdateLogin = async (req: Request, res: Response) => {
           ...(entityType.toLowerCase() === 'alunofutebol' && { alunoFutebolId: entityId }),
           ...(entityType.toLowerCase() === 'alunocrossfit' && { alunoCrossfitId: entityId }),
           ...(entityType.toLowerCase() === 'responsavel' && { responsavelId: entityId }),
+          ...(entityType.toLowerCase() === 'treinador' && { treinadorId: entityId }),
         },
       });
     }

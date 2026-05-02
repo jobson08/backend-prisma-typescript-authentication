@@ -53,10 +53,15 @@ router.post(
       else if (entity === 'funcionario' && id) {
         folderPath = `edupay/${req.escolinhaId}/funcionarios`;
       }
+      // ← Treinador
+      else if (entity === 'treinador' && id) {
+        folderPath = `edupay/${req.escolinhaId}/treinador`;
+      }
      // ← responsavel
        else if (entity === 'responsavel' && id) {
         folderPath = `edupay/${req.escolinhaId}/responsavel`;
       }
+     
 
       console.log(`[UPLOAD] Entidade: ${entity} | ID: ${id} | Pasta: ${folderPath}`);
 
@@ -96,6 +101,13 @@ router.post(
       // ← NOVO: Funcionário
       else if (entity === 'funcionario' && id) {
         await prisma.funcionario.update({
+          where: { id },
+          data: { fotoUrl: url },
+        });
+      }
+       // ← NOVO: Treinador
+      else if (entity === 'treinador' && id) {
+        await prisma.treinador.update({
           where: { id },
           data: { fotoUrl: url },
         });
@@ -161,6 +173,13 @@ router.delete(
       // ← NOVO: Funcionário
       else if (entity === 'funcionario' && id) {
         await prisma.funcionario.update({
+          where: { id },
+          data: { fotoUrl: null },
+        });
+      }
+         // ← NOVO: Treinador
+      else if (entity === 'treinador' && id) {
+        await prisma.treinador.update({
           where: { id },
           data: { fotoUrl: null },
         });

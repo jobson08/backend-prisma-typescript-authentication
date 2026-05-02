@@ -25,14 +25,18 @@ export interface AuthUser {
   role: UserRole;
   tenantId: string | null;
   escolinhaId: string | null;
-  alunoFutebolId?: string;     // ← ADICIONADO
-  alunoCrossfitId?: string;    // ← opcional para futuro
+  alunoFutebolId?: string;
+  alunoCrossfitId?: string;
+  funcionarioId?: string;
+  treinadorId?: string;
+  cargo?: string;                    // ← Essencial
   escolinha?: {
     id: string;
     nome: string;
     logoUrl: string | null;
   } | null;
 }
+
 declare global {
   namespace Express {
     interface Request {
@@ -51,9 +55,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   const token = authHeader.split(' ')[1];
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { id: string; exp: number; iat: number };
+    const payload = jwt.verify(token, JWT_SECRET) as { id: string };
 
-   const user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {
         id: true,
@@ -63,24 +67,24 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         img: true,
         escolinhaId: true,
         escolinha: {
-          select: {
-            id: true,
-            nome: true,
-            logoUrl: true,
-          },
+          select: { id: true, nome: true, logoUrl: true }
         },
-        // Busca relação com AlunoFutebol
-        alunoFutebol: {
-          select: { id: true }
+        alunoFutebol: { select: { id: true } },
+        alunoCrossfit: { select: { id: true } },
+        treinador: { select: { id: true } },
+        funcionario: { 
+          select: { 
+            id: true, 
+            cargo: true   // ← Carregando o cargo
+          } 
         },
       },
     });
+
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado' });
     }
 
-    // Monta req.user (tenantId continua sendo o nome lógico)
-    // Monta req.user
     req.user = {
       id: user.id,
       email: user.email,
@@ -89,6 +93,10 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       tenantId: user.escolinhaId,
       escolinhaId: user.escolinhaId,
       alunoFutebolId: user.alunoFutebol?.id,
+      alunoCrossfitId: user.alunoCrossfit?.id,
+      treinadorId: user.treinador?.id,
+      funcionarioId: user.funcionario?.id,
+      cargo: user.role === 'TREINADOR' ? 'TREINADOR' : undefined,       // ← Aqui está o cargo ("TREINADOR")
       escolinha: user.escolinha ? {
         id: user.escolinha.id,
         nome: user.escolinha.nome,
@@ -99,26 +107,26 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     console.log("✅ [Auth Middleware] Usuário carregado com sucesso:", {
       id: req.user.id,
       role: req.user.role,
-      alunoFutebolId: req.user.alunoFutebolId
+      cargo: req.user.cargo,
+      funcionarioId: req.user.funcionarioId
     });
 
-    next();  // ← Garanta que next() está sendo chamado
+    next();
   } catch (error) {
     console.error('Erro na autenticação:', error);
     return res.status(401).json({ error: 'Token inválido ou expirado' });
   }
 };
 
+// RoleGuard e TenantGuard (mantidos)
 export const roleGuard = (roles: UserRole | UserRole[], ...moreRoles: UserRole[]) => {
   const allowedRoles = Array.isArray(roles) ? roles : [roles, ...moreRoles];
 
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Não autenticado' });
-    }
+    if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Acesso negado: permissão insuficiente' });
+      return res.status(403).json({ error: 'Acesso negado' });
     }
 
     next();
@@ -126,9 +134,7 @@ export const roleGuard = (roles: UserRole | UserRole[], ...moreRoles: UserRole[]
 };
 
 export const tenantGuard = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Não autenticado' });
-  }
+  if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
 
   if (req.user.role !== 'SUPERADMIN' && !req.user.tenantId) {
     return res.status(403).json({ error: 'Usuário não associado a nenhuma escolinha' });

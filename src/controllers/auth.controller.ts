@@ -11,28 +11,30 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET não definido no .env');
 }
 
-// Validação do login
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
 
-type LoginInput = z.infer<typeof loginSchema>;
-
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password }: LoginInput = loginSchema.parse(req.body);
+    const { email, password } = loginSchema.parse(req.body);
 
-    // Busca o usuário completo (traz password, img, escolinha, tudo)
+    // Busca completa com todas as relações necessárias
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
         escolinha: {
-          select: {
-            id: true,
-            nome: true,
-            logoUrl: true,
-          },
+          select: { id: true, nome: true, logoUrl: true }
+        },
+        alunoFutebol: { select: { id: true } },
+        alunoCrossfit: { select: { id: true } },
+        treinador: { select: { id: true } },
+        funcionario: {                    // ← ESSENCIAL para TREINADOR
+          select: { 
+            id: true, 
+            cargo: true 
+          } 
         },
       },
     });
@@ -41,13 +43,12 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Verifica a senha
     const passwordValid = await bcrypt.compare(password, user.password);
     if (!passwordValid) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Gera JWT
+    // Gera o token
     const token = jwt.sign(
       {
         id: user.id,
@@ -58,37 +59,27 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    // Remove a senha antes de enviar pro frontend
-    const { password: _, ...userWithoutPassword } = user;
-
     res.status(200).json({
       success: true,
       message: 'Login realizado com sucesso!',
       token,
       user: {
-        ...userWithoutPassword,
-        tenantId: user.escolinhaId,
-        escolinha: user.escolinha
-          ? {
-              id: user.escolinha.id,
-              nome: user.escolinha.nome,
-              logoUrl: user.escolinha.logoUrl,
-            }
-          : null,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        cargo: user.funcionario?.cargo,           // ← Aqui está o cargo
+        funcionarioId: user.funcionario?.id,
+        escolinhaId: user.escolinhaId,
+        escolinha: user.escolinha ? {
+          id: user.escolinha.id,
+          nome: user.escolinha.nome,
+          logoUrl: user.escolinha.logoUrl,
+        } : null,
       },
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      });
-    }
-
+  } catch (error: any) {
     console.error('Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno no servidor' });
+    res.status(500).json({ error: error.message || 'Erro interno no servidor' });
   }
 };

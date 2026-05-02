@@ -35,6 +35,9 @@ model User {
   escolinhaId String?
   escolinha   Escolinha? @relation(fields: [escolinhaId], references: [id])
 
+  treinadorId String?    @unique
+  treinador   Treinador? @relation(fields: [treinadorId], references: [id])
+
   funcionarioId String?      @unique
   funcionario   Funcionario? @relation(fields: [funcionarioId], references: [id])
 
@@ -166,6 +169,7 @@ model Escolinha {
   users                User[] // 1:N (admins da escolinha)
   alunosFutebol        AlunoFutebol[]
   alunosCrossfit       AlunoCrossfit[]
+  treinador            Treinador[]
   funcionarios         Funcionario[]
   responsaveis         Responsavel[]
   treinos              Treino[]
@@ -181,6 +185,34 @@ model Escolinha {
   aulaCrossfit         AulaCrossfit[]
 
   @@index([cidade, estado])
+}
+
+//===================== Treinador ======================
+model Treinador {
+  id             String    @id @default(uuid())
+  nome           String
+  email          String    @unique
+  telefone       String?
+  fotoUrl        String?
+  dataNascimento DateTime?
+  observacoes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  userId String? @unique
+  user   User?
+
+  // Acessos do Treinador
+  treinos           Treino[]
+  treinosRecorrente TreinoRecorrente[]
+  avaliacoes        Avaliacao[]
+  aulaCrossfit      AulaCrossfit[]
+  aulasExtras       AulaExtraAluno[] // se quiser
 }
 
 // ==================== FUNCIONÁRIO ====================
@@ -363,6 +395,9 @@ model AulaExtraAluno {
   alunoId String
   aluno   AlunoFutebol @relation(fields: [alunoId], references: [id], onDelete: Cascade)
 
+  treinadorId String?    @unique
+  treinador   Treinador? @relation(fields: [treinadorId], references: [id])
+
   funcionarioTreinadorId String
   funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
 
@@ -381,20 +416,26 @@ model AulaExtraAluno {
 
 //============================Aula crossfit ======================================
 model AulaCrossfit {
-  id               String              @id @default(uuid())
+  id               String  @id @default(uuid())
   nome             String
   horario          String?
   valorMensalidade Float
-  vagasMax         Int                 @default(15)
-  vagasAtuais      Int                 @default(0)
-  professorId      String
-  professor        Funcionario         @relation(fields: [professorId], references: [id])
-  escolinhaId      String
-  escolinha        Escolinha           @relation(fields: [escolinhaId], references: [id])
-  inscricoes       AulaCrossfitAluno[]
-  descricao        String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  vagasMax         Int     @default(15)
+  vagasAtuais      Int     @default(0)
+
+  treinadorId String?    @unique
+  treinador   Treinador? @relation(fields: [treinadorId], references: [id])
+
+  professorId String
+  professor   Funcionario @relation(fields: [professorId], references: [id])
+
+  escolinhaId String
+  escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  inscricoes AulaCrossfitAluno[]
+  descricao  String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 }
 
 //============================Aula crossfit com aluno ======================================
@@ -434,6 +475,9 @@ model Treino {
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
   escolinhaId String
 
+  treinadorId String?    @unique
+  treinador   Treinador? @relation(fields: [treinadorId], references: [id])
+
   funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
   funcionarioTreinadorId String
 
@@ -454,6 +498,9 @@ model TreinoRecorrente {
 
   escolinhaId String
   escolinha   Escolinha @relation(fields: [escolinhaId], references: [id])
+
+  treinadorId String?    @unique
+  treinador   Treinador? @relation(fields: [treinadorId], references: [id])
 
   funcionarioTreinadorId String
   funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
@@ -530,7 +577,10 @@ model Avaliacao {
 
   // Relação com treinador
   treinadorId String
-  treinador   Funcionario @relation(fields: [treinadorId], references: [id])
+  treinador   Treinador @relation(fields: [treinadorId], references: [id])
+
+  funcionarioTreinadorId String
+  funcionarioTreinador   Funcionario @relation(fields: [funcionarioTreinadorId], references: [id])
 
   // Relação DIRETA com a escolinha
   escolinhaId String

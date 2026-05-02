@@ -31,6 +31,7 @@ import { getFinanceiroMensalController } from '../controllers/tenant/financeiro.
 import { validate } from '../middleware/validate';
 import { getInadimplentesController } from '../controllers/tenant/inadimplentes.controller';
 import { createTreinoRecorrente, generateTreinosMes, getTreinoRecorrenteById, listTreinosRecorrentes, updateTreinoRecorrente, deleteTreinoRecorrente } from '../controllers/tenant/treinoRecorrente.controller';
+import { createTreinador, deleteTreinador, getTreinadorById, listTreinadores, redefinirSenhaTreinador, updateTreinador } from '../controllers/tenant/treinador.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
 const router = Router();
@@ -98,6 +99,15 @@ router.get('/aluno-futebol/treinos-mes',
 
 //----------------------------- Proteção: só ADMIN da escolinha pode acessar essas rotas-----------------
 router.use(authMiddleware, roleGuard('ADMIN'), tenantGuard);
+
+// --------------------------------Rotas de Treinador ---------------------------------------------------------
+
+router.post('/treinadores', authMiddleware, roleGuard('ADMIN'), tenantGuard, createTreinador);
+router.get('/treinadores', authMiddleware, tenantGuard, listTreinadores);
+router.get('/treinadores/:id', authMiddleware, tenantGuard, getTreinadorById);
+router.put('/treinadores/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, updateTreinador);
+router.delete('/treinadores/:id', authMiddleware, roleGuard('ADMIN'), tenantGuard, deleteTreinador);
+router.post('/treinadores/:id/redefinir-senha',authMiddleware, roleGuard('ADMIN'),tenantGuard, redefinirSenhaTreinador);
 
 //----------------------------Rotas Funcionario (protegidos por ADMIN do tenant)---------------------
 router.post('/funcionarios', authMiddleware, roleGuard('ADMIN'), upload.single("foto"), tenantGuard, createFuncionario);

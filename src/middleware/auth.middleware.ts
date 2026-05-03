@@ -29,7 +29,9 @@ export interface AuthUser {
   alunoCrossfitId?: string;
   funcionarioId?: string;
   treinadorId?: string;
-  cargo?: string;                    // ← Essencial
+  cargo?: string;   
+  fotoUrl?: string | null;       // ← Adicione se necessário
+  telefone?: string | null;                 // ← Essencial
   escolinha?: {
     id: string;
     nome: string;
@@ -71,7 +73,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         },
         alunoFutebol: { select: { id: true } },
         alunoCrossfit: { select: { id: true } },
-        treinador: { select: { id: true } },
+        treinador: { select: { id: true} },
         funcionario: { 
           select: { 
             id: true, 
@@ -104,12 +106,12 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       } : null,
     };
 
-    console.log("✅ [Auth Middleware] Usuário carregado com sucesso:", {
+   /* console.log("✅ [Auth Middleware] Usuário carregado com sucesso:", {
       id: req.user.id,
       role: req.user.role,
       cargo: req.user.cargo,
       funcionarioId: req.user.funcionarioId
-    });
+    });*/
 
     next();
   } catch (error) {
@@ -136,9 +138,10 @@ export const roleGuard = (roles: UserRole | UserRole[], ...moreRoles: UserRole[]
 export const tenantGuard = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
 
-  if (req.user.role !== 'SUPERADMIN' && !req.user.tenantId) {
-    return res.status(403).json({ error: 'Usuário não associado a nenhuma escolinha' });
+  if (['SUPERADMIN', 'ADMIN', 'TREINADOR', 'FUNCIONARIO'].includes(req.user.role)) {
+    req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
+    return next();
   }
 
-  next();
+  return res.status(403).json({ error: 'Acesso negado: permissão insuficiente' });
 };

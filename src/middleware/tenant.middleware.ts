@@ -6,24 +6,32 @@ export const tenantGuard = (req: Request, res: Response, next: NextFunction) => 
     return res.status(401).json({ error: 'Não autenticado' });
   }
 
+  const role = req.user.role?.toUpperCase();
+
+  // ===================== PERMISSÕES =====================
+
   // SUPERADMIN pode acessar tudo
-  if (req.user.role === 'SUPERADMIN') {
+  if (role === 'SUPERADMIN') {
     return next();
   }
 
-  // ALUNOS e RESPONSÁVEIS podem acessar
-  if (['ALUNO_FUTEBOL', 'ALUNO_CROSSFIT', 'RESPONSAVEL'].includes(req.user.role)) {
+  // TREINADOR + ADMIN + FUNCIONARIO podem acessar rotas tenant
+  if (['ADMIN', 'TREINADOR', 'FUNCIONARIO'].includes(role)) {
+    req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
+
+    if (!req.escolinhaId) {
+      return res.status(403).json({ error: 'Usuário não associado a nenhuma escolinha' });
+    }
+
+    return next();
+  }
+
+  // Alunos e Responsáveis também podem acessar (se necessário)
+  if (['ALUNO_FUTEBOL', 'ALUNO_CROSSFIT', 'RESPONSAVEL'].includes(role)) {
     req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
     return next();
   }
 
-  // Para ADMIN e outros roles, exige escolinhaId
-  if (!req.user.escolinhaId && !req.user.tenantId) {
-    return res.status(403).json({ error: 'Usuário não associado a nenhuma escolinha' });
-  }
-
-  // Injeta o ID da escolinha
-  req.escolinhaId = req.user.escolinhaId || req.user.tenantId || undefined;
-
-  next();
+  // Bloqueia qualquer outro role
+  return res.status(403).json({ error: 'Acesso negado: permissão insuficiente' });
 };

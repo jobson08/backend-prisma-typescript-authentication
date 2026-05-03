@@ -1,7 +1,7 @@
 // src/services/tenant/treinador.service.ts
 import { prisma } from '../../server';
 import bcrypt from 'bcrypt';
-import { CreateTreinadorDto, UpdateTreinadorDto } from '../../dto/tenant/treinador.dto';
+import { CreateTreinadorDto, UpdateTreinadorConfigDto, UpdateTreinadorDto } from '../../dto/tenant/treinador.dto';
 import cloudinary from '../../config/cloudinary';
 import { AppError } from '../../utils/AppError';
 
@@ -115,6 +115,61 @@ export class TreinadorService {
       data: updateData,
     });
   }
+
+  async updateConfig(treinadorId: string, data: UpdateTreinadorConfigDto) {
+  console.log('[SERVICE UPDATE CONFIG] Iniciando atualização de config - ID:', treinadorId);
+
+  const treinador = await prisma.treinador.findUnique({
+    where: { id: treinadorId },
+    include: { user: true },
+  });
+
+  if (!treinador || !treinador.user) {
+    throw new AppError('Treinador ou usuário não encontrado', 404);
+  }
+
+  const updateData: any = {};
+
+  // Atualizar e-mail
+  if (data.email && data.email !== treinador.email) {
+    const emailLower = data.email.toLowerCase().trim();
+
+    const existing = await prisma.user.findFirst({
+      where: { email: emailLower, id: { not: treinador.user.id } },
+    });
+
+    if (existing) throw new AppError('E-mail já em uso', 409);
+
+    updateData.email = emailLower;
+  }
+
+  // Atualizar senha
+  if (data.novaSenha && data.senhaAtual) {
+    const isPasswordValid = await bcrypt.compare(data.senhaAtual, treinador.user.password);
+   
+    if (!isPasswordValid) {
+      throw new AppError('Senha atual incorreta', 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(data.novaSenha, 10);
+
+    await prisma.user.update({
+      where: { id: treinador.user.id },
+      data: { password: hashedPassword },
+    });
+
+    console.log('[SERVICE] Senha atualizada com sucesso');
+  }
+
+  // Atualizar outros campos do treinador
+  const treinadorAtualizado = await prisma.treinador.update({
+    where: { id: treinadorId },
+    data: updateData,
+  });
+
+  console.log('[SERVICE] Configurações atualizadas com sucesso');
+  return treinadorAtualizado;
+}
 
   async delete(escolinhaId: string, id: string) {
     await this.findById(escolinhaId, id);

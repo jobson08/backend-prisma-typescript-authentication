@@ -23,6 +23,12 @@ export const UpdateTreinadorSchema = z.object({
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional(),
 });
 
+export const UpdateTreinadorConfigSchema = z.object({
+  email: z.string().email('E-mail inválido').optional(),
+  senhaAtual: z.string().min(1, 'Senha atual é obrigatória').optional(),
+  novaSenha: z.string().min(6, 'Nova senha deve ter no mínimo 6 caracteres').optional(),
+});
+
 export interface TreinadorResponseDto {
   id: string;
   nome: string;
@@ -46,3 +52,4 @@ export interface TreinadorResponseDto {
 
 export type CreateTreinadorDto = z.infer<typeof CreateTreinadorSchema>;
 export type UpdateTreinadorDto = z.infer<typeof UpdateTreinadorSchema>;
+export type UpdateTreinadorConfigDto = z.infer<typeof UpdateTreinadorConfigSchema>;

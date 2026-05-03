@@ -31,7 +31,7 @@ import { getFinanceiroMensalController } from '../controllers/tenant/financeiro.
 import { validate } from '../middleware/validate';
 import { getInadimplentesController } from '../controllers/tenant/inadimplentes.controller';
 import { createTreinoRecorrente, generateTreinosMes, getTreinoRecorrenteById, listTreinosRecorrentes, updateTreinoRecorrente, deleteTreinoRecorrente } from '../controllers/tenant/treinoRecorrente.controller';
-import { createTreinador, deleteTreinador, getTreinadorById, listTreinadores, redefinirSenhaTreinador, updateTreinador } from '../controllers/tenant/treinador.controller';
+import { createTreinador, deleteTreinador, getTreinadorById, listTreinadores, redefinirSenhaTreinador, updateTreinador, updateTreinadorConfig } from '../controllers/tenant/treinador.controller';
 
 //----------------- Rotas específicas do tenant (painel da escolinha)----------------------
 const router = Router();
@@ -49,6 +49,9 @@ const upload = multer({
     }
   },
 });
+// ==================== ROTAS PARA nam ADMIN USER DO ALUNO FUTEBOL, ALUNO CROSSFIT FUNCIONAARIO TREINADOR ====================
+//alterar senha ou email do treinador em pagina configuração
+router.put('/treinadores/configuracoes',authMiddleware,roleGuard('TREINADOR'),tenantGuard,updateTreinadorConfig);
 
 // ==================== ROTAS PARA DASHBOARD USER DO ALUNO FUTEBOL ====================
 

@@ -3,7 +3,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import bcrypt from 'bcrypt';
 import { TreinadorService } from '../../services/tenant/treinador.service';
-import { CreateTreinadorSchema, UpdateTreinadorSchema } from '../../dto/tenant/treinador.dto';
+import { CreateTreinadorSchema, UpdateTreinadorConfigSchema, UpdateTreinadorSchema } from '../../dto/tenant/treinador.dto';
+import z from 'zod';
 
 const service = new TreinadorService();
 
@@ -114,6 +115,44 @@ export const redefinirSenhaTreinador = async (req: Request, res: Response) => {
       success: false,
       error: err.message || 'Erro ao redefinir senha',
     });
+  }
+};
+
+// src/controllers/tenant/treinador.controller.ts
+export const updateTreinadorConfig = async (req: Request, res: Response) => {
+  try {
+    const treinadorId = req.user?.treinadorId;
+
+    if (!treinadorId) {
+      return res.status(403).json({ 
+        error: 'Acesso negado. Treinador não identificado no token.' 
+      });
+    }
+
+    const data = UpdateTreinadorConfigSchema.parse(req.body);
+
+    const result = await service.updateConfig(treinadorId, data);
+
+   return res.status(200).json({
+      success: true,
+      message: 'Configurações atualizadas com sucesso',
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('[UPDATE CONFIG TREINADOR] Erro:', error);
+
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({success: false, error: 'Dados inválidos', details: error.issues });
+    }
+// Tratamento de erro de senha incorreta (exemplo)
+    if (error.message?.includes('Senha atual') || error.message?.includes('incorreta')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Senha atual incorreta'
+      });
+    }
+    
+    res.status(500).json({ error: error.message || 'Erro ao atualizar configurações' });
   }
 };
 
